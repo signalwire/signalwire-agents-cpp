@@ -3,6 +3,7 @@
 #include "signalwire/skills/skill_base.hpp"
 #include "signalwire/skills/skill_registry.hpp"
 #include "signalwire/datamap/datamap.hpp"
+#include "signalwire/common.hpp"
 
 namespace signalwire {
 namespace skills {

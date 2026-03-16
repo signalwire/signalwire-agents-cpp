@@ -23,14 +23,12 @@
 
 namespace httplib { class Server; class Request; class Response; }
 
+namespace signalwire { namespace server { class AgentServer; } }
+
 namespace signalwire {
 namespace agent {
 
 using json = nlohmann::json;
-
-// Forward declarations
-class SkillBase;
-class SkillManager;
 
 /// POM section for structured prompts
 struct PomSection {
@@ -113,6 +111,7 @@ struct SwaigQueryParam {
 // ============================================================================
 
 class AgentBase {
+    friend class signalwire::server::AgentServer;
 public:
     explicit AgentBase(const std::string& name = "agent",
                        const std::string& route = "/",

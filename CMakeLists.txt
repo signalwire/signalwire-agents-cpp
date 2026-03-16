@@ -13,19 +13,12 @@ find_package(OpenSSL REQUIRED)
 # Threads
 find_package(Threads REQUIRED)
 
-# Phase 1-3 sources (explicit list — Phase 4+ files excluded until their headers exist)
-set(SOURCES
-    src/logging/logger.cpp
-    src/swml/document.cpp
-    src/swml/schema.cpp
-    src/swml/service.cpp
-    src/swaig/function_result.cpp
-    src/security/session_manager.cpp
-    src/datamap/datamap.cpp
-    src/contexts/contexts.cpp
-)
+# All sources
+file(GLOB_RECURSE SOURCES "src/*.cpp")
 
 add_library(signalwire_agents STATIC ${SOURCES})
+# Note: CPPHTTPLIB_OPENSSL_SUPPORT disabled - httplib requires OpenSSL 3.0+
+# SSL connections handled externally; HMAC/crypto uses OpenSSL directly
 target_link_libraries(signalwire_agents OpenSSL::SSL OpenSSL::Crypto Threads::Threads)
 target_include_directories(signalwire_agents PUBLIC ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/deps)
 

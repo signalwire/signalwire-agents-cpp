@@ -74,5 +74,9 @@ private:
         }(); \
     }
 
+/// Ensure all built-in skills are registered. Called automatically but
+/// can be called explicitly to force linkage.
+void ensure_builtin_skills_registered();
+
 } // namespace skills
 } // namespace signalwire

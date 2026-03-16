@@ -3,6 +3,7 @@
 #include <cassert>
 #include <functional>
 #include <vector>
+#include "signalwire/logging.hpp"
 
 // ========================================================================
 // Minimal test framework (no external deps)
@@ -67,8 +68,16 @@ static std::vector<TestCase>& get_tests() {
 #include "test_security.cpp"
 #include "test_datamap.cpp"
 #include "test_contexts.cpp"
+#include "test_agent.cpp"
+#include "test_skills.cpp"
+#include "test_prefabs.cpp"
+#include "test_server.cpp"
+#include "test_rest.cpp"
 
 int main() {
+    // Suppress logging during tests
+    signalwire::Logger::instance().suppress();
+
     std::cerr << "Running " << get_tests().size() << " tests...\n\n";
 
     for (const auto& tc : get_tests()) {
