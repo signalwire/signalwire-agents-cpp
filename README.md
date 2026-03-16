@@ -6,8 +6,10 @@ A C++17 framework for building, deploying, and managing AI agents as microservic
 
 ```cpp
 #include <signalwire/agent/agent_base.hpp>
+#include <nlohmann/json.hpp>
 
 using namespace signalwire;
+using json = nlohmann::json;
 
 class MyAgent : public agent::AgentBase {
 public:

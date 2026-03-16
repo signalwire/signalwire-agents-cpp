@@ -63,6 +63,7 @@ static std::vector<TestCase>& get_tests() {
 } while(0)
 
 // Include all test files
+// Original test files
 #include "test_swml.cpp"
 #include "test_function_result.cpp"
 #include "test_security.cpp"
@@ -74,6 +75,58 @@ static std::vector<TestCase>& get_tests() {
 #include "test_server.cpp"
 #include "test_rest.cpp"
 #include "test_relay.cpp"
+
+// Mixin-equivalent test files
+#include "test_prompt.cpp"
+#include "test_tool.cpp"
+#include "test_aiconfig.cpp"
+#include "test_web.cpp"
+#include "test_auth.cpp"
+#include "test_verb.cpp"
+#include "test_render.cpp"
+
+// Individual skill test files
+#include "test_skill_datetime.cpp"
+#include "test_skill_math.cpp"
+#include "test_skill_joke.cpp"
+#include "test_skill_weather.cpp"
+#include "test_skill_websearch.cpp"
+#include "test_skill_wikipedia.cpp"
+#include "test_skill_spider.cpp"
+#include "test_skill_datasphere.cpp"
+#include "test_skill_datasphere_serverless.cpp"
+#include "test_skill_transfer.cpp"
+#include "test_skill_play_bg.cpp"
+#include "test_skill_trivia.cpp"
+#include "test_skill_info_gatherer.cpp"
+#include "test_skill_vector_search.cpp"
+#include "test_skill_claude.cpp"
+#include "test_skill_mcp.cpp"
+#include "test_skill_custom.cpp"
+#include "test_skill_registry.cpp"
+
+// Prefab test files
+#include "test_prefab_info_gatherer.cpp"
+#include "test_prefab_survey.cpp"
+#include "test_prefab_receptionist.cpp"
+#include "test_prefab_faqbot.cpp"
+#include "test_prefab_concierge.cpp"
+
+// RELAY split test files
+#include "test_relay_call.cpp"
+#include "test_relay_action.cpp"
+#include "test_relay_event.cpp"
+#include "test_relay_message.cpp"
+
+// REST split test files
+#include "test_rest_calling.cpp"
+#include "test_rest_fabric.cpp"
+#include "test_rest_namespaces.cpp"
+
+// Utility test files
+#include "test_schema_utils.cpp"
+#include "test_logging.cpp"
+#include "test_cli.cpp"
 
 int main() {
     // Suppress logging during tests
