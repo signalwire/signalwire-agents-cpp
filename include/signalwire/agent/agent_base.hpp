@@ -223,6 +223,20 @@ public:
     std::vector<std::string> list_skills() const;
 
     // ========================================================================
+    // MCP Integration
+    // ========================================================================
+
+    AgentBase& add_mcp_server(const std::string& url,
+                               const std::map<std::string, std::string>& headers = {},
+                               bool resources = false,
+                               const std::map<std::string, std::string>& resource_vars = {});
+    AgentBase& enable_mcp_server(bool enable = true);
+    bool is_mcp_server_enabled() const { return mcp_server_enabled_; }
+    const std::vector<json>& mcp_servers() const { return mcp_servers_; }
+    std::vector<json> build_mcp_tool_list() const;
+    json handle_mcp_request(const json& body);
+
+    // ========================================================================
     // Web / Config Methods
     // ========================================================================
 
@@ -378,6 +392,10 @@ protected:
     std::optional<std::string> webhook_url_;
     std::vector<SwaigQueryParam> swaig_query_params_;
     bool debug_routes_ = false;
+
+    // MCP
+    std::vector<json> mcp_servers_;
+    bool mcp_server_enabled_ = false;
 
     // SIP
     bool sip_routing_enabled_ = false;

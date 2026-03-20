@@ -59,6 +59,8 @@ AgentBase::AgentBase(const AgentBase& other)
       context_builder_(other.context_builder_),
       loaded_skills_(other.loaded_skills_),
       skill_configs_(other.skill_configs_),
+      mcp_servers_(other.mcp_servers_),
+      mcp_server_enabled_(other.mcp_server_enabled_),
       proxy_url_(other.proxy_url_),
       webhook_url_(other.webhook_url_),
       swaig_query_params_(other.swaig_query_params_),
@@ -464,6 +466,154 @@ AgentBase& AgentBase::enable_debug_routes(bool enable) {
 }
 
 // ============================================================================
+// MCP Integration
+// ============================================================================
+
+AgentBase& AgentBase::add_mcp_server(const std::string& url,
+                                      const std::map<std::string, std::string>& headers,
+                                      bool resources,
+                                      const std::map<std::string, std::string>& resource_vars) {
+    json server;
+    server["url"] = url;
+    if (!headers.empty()) {
+        json h = json::object();
+        for (const auto& [k, v] : headers) h[k] = v;
+        server["headers"] = h;
+    }
+    if (resources) {
+        server["resources"] = true;
+    }
+    if (!resource_vars.empty()) {
+        json rv = json::object();
+        for (const auto& [k, v] : resource_vars) rv[k] = v;
+        server["resource_vars"] = rv;
+    }
+    mcp_servers_.push_back(server);
+    return *this;
+}
+
+AgentBase& AgentBase::enable_mcp_server(bool enable) {
+    mcp_server_enabled_ = enable;
+    return *this;
+}
+
+std::vector<json> AgentBase::build_mcp_tool_list() const {
+    std::vector<json> tools;
+    for (const auto& name : tool_order_) {
+        auto it = tools_.find(name);
+        if (it != tools_.end()) {
+            json tool;
+            tool["name"] = it->second.name;
+            tool["description"] = it->second.description.empty() ? it->second.name : it->second.description;
+            if (!it->second.parameters.is_null() && !it->second.parameters.empty()) {
+                tool["inputSchema"] = it->second.parameters;
+            } else {
+                tool["inputSchema"] = json::object({{"type", "object"}, {"properties", json::object()}});
+            }
+            tools.push_back(tool);
+        }
+    }
+    return tools;
+}
+
+json AgentBase::handle_mcp_request(const json& body) {
+    std::string jsonrpc = body.value("jsonrpc", "");
+    std::string method = body.value("method", "");
+    auto req_id = body.contains("id") ? body["id"] : json(nullptr);
+    json params = body.value("params", json::object());
+
+    auto mcp_error = [&](int code, const std::string& message) -> json {
+        return json::object({
+            {"jsonrpc", "2.0"},
+            {"id", req_id},
+            {"error", json::object({{"code", code}, {"message", message}})}
+        });
+    };
+
+    if (jsonrpc != "2.0") {
+        return mcp_error(-32600, "Invalid JSON-RPC version");
+    }
+
+    // Initialize handshake
+    if (method == "initialize") {
+        return json::object({
+            {"jsonrpc", "2.0"},
+            {"id", req_id},
+            {"result", json::object({
+                {"protocolVersion", "2025-06-18"},
+                {"capabilities", json::object({{"tools", json::object()}})},
+                {"serverInfo", json::object({{"name", name_}, {"version", "1.0.0"}})}
+            })}
+        });
+    }
+
+    // Initialized notification
+    if (method == "notifications/initialized") {
+        return json::object({{"jsonrpc", "2.0"}, {"id", req_id}, {"result", json::object()}});
+    }
+
+    // List tools
+    if (method == "tools/list") {
+        return json::object({
+            {"jsonrpc", "2.0"},
+            {"id", req_id},
+            {"result", json::object({{"tools", build_mcp_tool_list()}})}
+        });
+    }
+
+    // Call tool
+    if (method == "tools/call") {
+        std::string tool_name = params.value("name", "");
+        json arguments = params.value("arguments", json::object());
+
+        auto it = tools_.find(tool_name);
+        if (it == tools_.end()) {
+            return mcp_error(-32602, "Unknown tool: " + tool_name);
+        }
+
+        try {
+            json raw_data = json::object({
+                {"function", tool_name},
+                {"argument", json::object({{"parsed", json::array({arguments})}})}
+            });
+
+            swaig::FunctionResult fn_result = on_function_call(tool_name, arguments, raw_data);
+            std::string response_text;
+            json result_json = fn_result.to_json();
+            if (result_json.contains("response") && result_json["response"].is_string()) {
+                response_text = result_json["response"].get<std::string>();
+            }
+
+            return json::object({
+                {"jsonrpc", "2.0"},
+                {"id", req_id},
+                {"result", json::object({
+                    {"content", json::array({json::object({{"type", "text"}, {"text", response_text}})})},
+                    {"isError", false}
+                })}
+            });
+        } catch (const std::exception& e) {
+            get_logger().error(std::string("MCP tool call error: ") + tool_name + ": " + e.what());
+            return json::object({
+                {"jsonrpc", "2.0"},
+                {"id", req_id},
+                {"result", json::object({
+                    {"content", json::array({json::object({{"type", "text"}, {"text", std::string("Error: ") + e.what()}})})},
+                    {"isError", true}
+                })}
+            });
+        }
+    }
+
+    // Ping
+    if (method == "ping") {
+        return json::object({{"jsonrpc", "2.0"}, {"id", req_id}, {"result", json::object()}});
+    }
+
+    return mcp_error(-32601, "Method not found: " + method);
+}
+
+// ============================================================================
 // SIP Methods
 // ============================================================================
 
@@ -721,6 +871,11 @@ json AgentBase::build_ai_verb(const std::string& webhook_url) const {
     if (!native_functions_.empty()) {
         swaig_section["native_functions"] = native_functions_;
     }
+    // MCP servers
+    if (!mcp_servers_.empty()) {
+        swaig_section["mcp_servers"] = mcp_servers_;
+    }
+
     if (!swaig_section.empty()) {
         ai["SWAIG"] = swaig_section;
     }
@@ -1011,6 +1166,38 @@ void AgentBase::setup_routes(httplib::Server& server) {
     server.Post(pp_path.c_str(), [this](const httplib::Request& req, httplib::Response& res) {
         handle_post_prompt_request(req, res);
     });
+
+    // MCP server endpoint (JSON-RPC 2.0)
+    if (mcp_server_enabled_) {
+        std::string mcp_path = base + (base.back() == '/' ? "" : "/") + "mcp";
+        server.Post(mcp_path.c_str(), [this](const httplib::Request& req, httplib::Response& res) {
+            add_security_headers(res);
+
+            if (req.body.empty()) {
+                json err = json::object({
+                    {"jsonrpc", "2.0"}, {"id", nullptr},
+                    {"error", json::object({{"code", -32700}, {"message", "Parse error"}})}
+                });
+                res.set_content(err.dump(), "application/json");
+                return;
+            }
+
+            json body;
+            try {
+                body = json::parse(req.body);
+            } catch (const json::parse_error& e) {
+                json err = json::object({
+                    {"jsonrpc", "2.0"}, {"id", nullptr},
+                    {"error", json::object({{"code", -32700}, {"message", std::string("Parse error: ") + e.what()}})}
+                });
+                res.set_content(err.dump(), "application/json");
+                return;
+            }
+
+            json response = handle_mcp_request(body);
+            res.set_content(response.dump(), "application/json");
+        });
+    }
 
     // Debug routes
     if (debug_routes_) {

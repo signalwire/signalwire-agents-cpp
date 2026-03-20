@@ -123,6 +123,9 @@ static std::vector<TestCase>& get_tests() {
 #include "test_rest_fabric.cpp"
 #include "test_rest_namespaces.cpp"
 
+// MCP integration tests
+#include "test_mcp.cpp"
+
 // Utility test files
 #include "test_schema_utils.cpp"
 #include "test_logging.cpp"
