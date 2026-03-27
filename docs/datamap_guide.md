@@ -2292,7 +2292,7 @@ For common patterns, convenience functions simplify DataMap creation:
 #### Simple API Tool
 
 ```python
-from signalwire_agents.core.data_map import create_simple_api_tool
+from signalwire.core.data_map import create_simple_api_tool
 
 weather = create_simple_api_tool(
     name='get_weather',
@@ -2313,7 +2313,7 @@ weather = create_simple_api_tool(
 #### Expression Tool
 
 ```python
-from signalwire_agents.core.data_map import create_expression_tool
+from signalwire.core.data_map import create_expression_tool
 
 control = create_expression_tool(
     name='media_control',

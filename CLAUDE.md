@@ -21,7 +21,7 @@ cd build && ./run_tests
 mkdir -p build && cd build && cmake .. && make -j$(nproc) && ./run_tests
 
 # Compile a standalone example (outside CMake)
-g++ -std=c++17 -I include -I deps examples/simple_agent.cpp -L build -lsignalwire_agents -lssl -lcrypto -lpthread -o simple_agent
+g++ -std=c++17 -I include -I deps examples/simple_agent.cpp -L build -lsignalwire -lssl -lcrypto -lpthread -o simple_agent
 ```
 
 ## Architecture
@@ -38,13 +38,13 @@ include/signalwire/           Public headers
     contexts/contexts.hpp     ContextBuilder, Context, Step, GatherInfo
     skills/                   SkillBase, SkillManager, SkillRegistry
     prefabs/prefabs.hpp       Pre-built agent types
-    rest/                     SignalWireClient, HttpClient, CrudResource
+    rest/                     RestClient, HttpClient, CrudResource
     security/                 SessionManager (HMAC-SHA256)
     relay/                    RELAY client stubs (constants, event, call, client)
     common.hpp                Utilities (UUID, base64, url_encode, env)
     logging.hpp               Thread-safe logger
-    signalwire_agents.hpp     Umbrella include
-    signalwire_agents_c.h     C wrapper (extern "C")
+    signalwire.hpp     Umbrella include
+    signalwire_c.h     C wrapper (extern "C")
 
 src/                          Implementation (.cpp)
 tests/                        All test files compiled into one binary via test_main.cpp
@@ -60,7 +60,7 @@ deps/                         Vendored: nlohmann/json.hpp, httplib.h
 - `signalwire::contexts` -- ContextBuilder, Context, Step, GatherInfo, GatherQuestion
 - `signalwire::skills` -- SkillBase, SkillManager, SkillRegistry
 - `signalwire::prefabs` -- InfoGathererAgent, SurveyAgent, etc.
-- `signalwire::rest` -- SignalWireClient, HttpClient, CrudResource
+- `signalwire::rest` -- RestClient, HttpClient, CrudResource
 - `signalwire::server` -- AgentServer
 - `signalwire::security` -- SessionManager
 
@@ -124,11 +124,11 @@ ctx.add_step("step1")
 
 ## Important Notes
 
-- Library is built as a static archive: `libsignalwire_agents.a`
+- Library is built as a static archive: `libsignalwire.a`
 - No package manager required; all deps vendored
 - CPPHTTPLIB_OPENSSL_SUPPORT is disabled (requires OpenSSL 3.0+)
 - SSL for httplib handled externally; crypto primitives use OpenSSL directly
 - RELAY client headers are stubs; WebSocket transport not yet implemented
-- C wrapper (`signalwire_agents_c.h`) provides FFI for other languages
+- C wrapper (`signalwire_c.h`) provides FFI for other languages
 - Examples are standalone `.cpp` files meant to illustrate usage, not built by CMake
 - Logging controlled by `SIGNALWIRE_LOG_LEVEL` env var and `Logger::instance()`

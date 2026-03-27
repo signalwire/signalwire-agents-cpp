@@ -69,7 +69,7 @@ Here's how these components relate to each other:
 To create an agent, extend the `AgentBase` class and define your agent's behavior:
 
 ```python
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 class MyAgent(AgentBase):
     def __init__(self):
@@ -250,7 +250,7 @@ SWAIG (SignalWire AI Gateway) functions allow the AI agent to perform actions an
 These are the traditional SWAIG functions that are handled locally by your agent:
 
 ```python
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire.core.function_result import SwaigFunctionResult
 
 @AgentBase.tool(
     name="get_weather",
@@ -596,7 +596,7 @@ The Skills System allows you to extend your agents with reusable capabilities vi
 ### Quick Start
 
 ```python
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 class SkillfulAgent(AgentBase):
     def __init__(self):
@@ -845,10 +845,10 @@ Before using local mode, you need to build search indexes:
 
 ```bash
 # Build index from documentation
-python -m signalwire_agents.cli.build_search docs --output docs.swsearch
+python -m signalwire.cli.build_search docs --output docs.swsearch
 
 # Build with custom settings
-python -m signalwire_agents.cli.build_search ./knowledge \
+python -m signalwire.cli.build_search ./knowledge \
     --output knowledge.swsearch \
     --file-types md,txt,pdf \
     --chunk-size 500 \
@@ -926,8 +926,8 @@ except ValueError as e:
 You can create your own skills by extending the `SkillBase` class:
 
 ```python
-from signalwire_agents.core.skill_base import SkillBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire.core.skill_base import SkillBase
+from signalwire.core.function_result import SwaigFunctionResult
 
 class WeatherSkill(SkillBase):
     """A custom skill for weather information"""
@@ -1001,7 +1001,7 @@ class WeatherSkill(SkillBase):
 
 **Using the custom skill:**
 ```python
-# Place the skill in signalwire_agents/skills/weather/skill.py
+# Place the skill in signalwire/skills/weather/skill.py
 # Then use it in your agent:
 
 agent.add_skill("weather", {
@@ -1887,7 +1887,7 @@ These hooks are particularly useful for:
 To implement lifecycle hooks, define them as regular SWAIG functions with these specific names:
 
 ```python
-from signalwire_agents import AgentBase, SwaigFunctionResult
+from signalwire import AgentBase, SwaigFunctionResult
 
 class MyAgent(AgentBase):
     def __init__(self):
@@ -2286,7 +2286,7 @@ The SDK includes several built-in prefab agents:
 Collects structured information from users:
 
 ```python
-from signalwire_agents.prefabs import InfoGathererAgent
+from signalwire.prefabs import InfoGathererAgent
 
 agent = InfoGathererAgent(
     fields=[
@@ -2308,7 +2308,7 @@ agent.serve(host="0.0.0.0", port=8000)
 Answers questions based on a knowledge base:
 
 ```python
-from signalwire_agents.prefabs import FAQBotAgent
+from signalwire.prefabs import FAQBotAgent
 
 agent = FAQBotAgent(
     knowledge_base_path="./docs",
@@ -2326,7 +2326,7 @@ agent.serve(host="0.0.0.0", port=8000)
 Routes users to specialized agents:
 
 ```python
-from signalwire_agents.prefabs import ConciergeAgent
+from signalwire.prefabs import ConciergeAgent
 
 agent = ConciergeAgent(
     routing_map={
@@ -2352,7 +2352,7 @@ agent.serve(host="0.0.0.0", port=8000)
 Conducts structured surveys with different question types:
 
 ```python
-from signalwire_agents.prefabs import SurveyAgent
+from signalwire.prefabs import SurveyAgent
 
 agent = SurveyAgent(
     survey_name="Customer Satisfaction",
@@ -2386,7 +2386,7 @@ agent.serve(host="0.0.0.0", port=8000)
 Handles call routing and department transfers:
 
 ```python
-from signalwire_agents.prefabs import ReceptionistAgent
+from signalwire.prefabs import ReceptionistAgent
 
 agent = ReceptionistAgent(
     departments=[
@@ -2420,8 +2420,8 @@ A well-designed prefab should:
 Example of a custom support agent prefab:
 
 ```python
-from signalwire_agents import AgentBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import AgentBase
+from signalwire.core.function_result import SwaigFunctionResult
 
 class CustomerSupportAgent(AgentBase):
     def __init__(
@@ -2525,7 +2525,7 @@ support_agent.serve(host="0.0.0.0", port=8000)
 You can also extend and customize the built-in prefabs:
 
 ```python
-from signalwire_agents.prefabs import InfoGathererAgent
+from signalwire.prefabs import InfoGathererAgent
 
 class EnhancedGatherer(InfoGathererAgent):
     def __init__(self, fields, **kwargs):
@@ -2852,8 +2852,8 @@ For more detailed testing documentation, see the [CLI Guide](cli_guide.md).
 ### Simple Question-Answering Agent
 
 ```python
-from signalwire_agents import AgentBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import AgentBase
+from signalwire.core.function_result import SwaigFunctionResult
 from datetime import datetime
 
 class SimpleAgent(AgentBase):

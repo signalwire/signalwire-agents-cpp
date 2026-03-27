@@ -1,11 +1,11 @@
 // Copyright (c) 2025 SignalWire
 // SPDX-License-Identifier: MIT
-// All REST API namespace implementations are inline in signalwire_client.hpp
+// All REST API namespace implementations are inline in rest_client.hpp
 // This file exists to satisfy the build system's expectation of source files
 // in the namespaces directory.
 
 // The namespace implementations are defined as nested structs within
-// SignalWireClient, which provides a clean API:
+// RestClient, which provides a clean API:
 //   client.fabric().subscribers.list()
 //   client.calling().dial({...})
 //   client.phone_numbers().search({{"area_code", "512"}})

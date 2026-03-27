@@ -8,7 +8,7 @@ has a `main()` and can be compiled independently against the SDK library.
 ```bash
 # From the project root (after building the library):
 g++ -std=c++17 -I include -I deps examples/simple_agent.cpp \
-    -L build -lsignalwire_agents -lssl -lcrypto -lpthread -o simple_agent
+    -L build -lsignalwire -lssl -lcrypto -lpthread -o simple_agent
 ./simple_agent
 ```
 

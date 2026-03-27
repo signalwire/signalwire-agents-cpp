@@ -409,7 +409,7 @@ The SDK is designed to be highly extensible:
 
 9. **Custom Skills**: Create reusable skill modules
    ```python
-   from signalwire_agents.core.skill_base import SkillBase
+   from signalwire.core.skill_base import SkillBase
    
    class MyCustomSkill(SkillBase):
        SKILL_NAME = "my_skill"

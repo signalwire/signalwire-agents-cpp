@@ -1,7 +1,7 @@
 // Copyright (c) 2025 SignalWire — MIT License
 // REST: Manage SWML scripts and call flows via Fabric API.
 
-#include <signalwire/rest/signalwire_client.hpp>
+#include <signalwire/rest/rest_client.hpp>
 #include <iostream>
 
 using namespace signalwire::rest;
@@ -9,7 +9,7 @@ using json = nlohmann::json;
 
 int main() {
     try {
-        auto client = SignalWireClient::from_env();
+        auto client = RestClient::from_env();
 
         // Create a SWML script
         auto script = client.fabric().swml_scripts.create({

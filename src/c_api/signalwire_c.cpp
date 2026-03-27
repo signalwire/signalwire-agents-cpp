@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // C wrapper implementation for the SignalWire AI Agents C++ SDK.
 
-#include "signalwire/signalwire_agents_c.h"
+#include "signalwire/signalwire_c.h"
 #include "signalwire/agent/agent_base.hpp"
 #include "signalwire/swaig/function_result.hpp"
 #include <string>

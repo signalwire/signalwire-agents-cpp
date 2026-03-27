@@ -1,7 +1,7 @@
 // REST client tests
 
 #include "signalwire/rest/http_client.hpp"
-#include "signalwire/rest/signalwire_client.hpp"
+#include "signalwire/rest/rest_client.hpp"
 
 using namespace signalwire::rest;
 using json = nlohmann::json;
@@ -27,13 +27,13 @@ TEST(rest_http_client_set_header) {
 }
 
 TEST(rest_signalwire_client_creation) {
-    SignalWireClient client("example.signalwire.com", "project_id", "token");
+    RestClient client("example.signalwire.com", "project_id", "token");
     ASSERT_EQ(client.http_client().base_url(), "https://example.signalwire.com");
     return true;
 }
 
 TEST(rest_signalwire_client_has_fabric) {
-    SignalWireClient client("example.signalwire.com", "proj", "tok");
+    RestClient client("example.signalwire.com", "proj", "tok");
     // Access fabric namespace without crash
     auto& fabric = client.fabric();
     (void)fabric;
@@ -41,42 +41,42 @@ TEST(rest_signalwire_client_has_fabric) {
 }
 
 TEST(rest_signalwire_client_has_calling) {
-    SignalWireClient client("example.signalwire.com", "proj", "tok");
+    RestClient client("example.signalwire.com", "proj", "tok");
     auto& calling = client.calling();
     (void)calling;
     return true;
 }
 
 TEST(rest_signalwire_client_has_phone_numbers) {
-    SignalWireClient client("example.signalwire.com", "proj", "tok");
+    RestClient client("example.signalwire.com", "proj", "tok");
     auto& pn = client.phone_numbers();
     (void)pn;
     return true;
 }
 
 TEST(rest_signalwire_client_has_datasphere) {
-    SignalWireClient client("example.signalwire.com", "proj", "tok");
+    RestClient client("example.signalwire.com", "proj", "tok");
     auto& ds = client.datasphere();
     (void)ds;
     return true;
 }
 
 TEST(rest_signalwire_client_has_video) {
-    SignalWireClient client("example.signalwire.com", "proj", "tok");
+    RestClient client("example.signalwire.com", "proj", "tok");
     auto& v = client.video();
     (void)v;
     return true;
 }
 
 TEST(rest_signalwire_client_has_compat) {
-    SignalWireClient client("example.signalwire.com", "proj", "tok");
+    RestClient client("example.signalwire.com", "proj", "tok");
     auto& c = client.compat();
     (void)c;
     return true;
 }
 
 TEST(rest_signalwire_client_has_all_namespaces) {
-    SignalWireClient client("example.signalwire.com", "proj", "tok");
+    RestClient client("example.signalwire.com", "proj", "tok");
     // Access all 21 namespaces without crash
     (void)client.fabric();
     (void)client.calling();
@@ -121,7 +121,7 @@ TEST(rest_from_env_missing_vars) {
     // Should throw when env vars are missing
     bool threw = false;
     try {
-        SignalWireClient::from_env();
+        RestClient::from_env();
     } catch (const std::runtime_error&) {
         threw = true;
     }

@@ -13,14 +13,14 @@ namespace rest {
 using json = nlohmann::json;
 
 /// Top-level SignalWire REST client with all API namespaces
-class SignalWireClient {
+class RestClient {
 public:
-    SignalWireClient(const std::string& space,
+    RestClient(const std::string& space,
                      const std::string& project_id,
                      const std::string& token);
 
     /// Initialize from environment variables
-    static SignalWireClient from_env();
+    static RestClient from_env();
 
     // ========================================================================
     // API Namespaces (all 21)

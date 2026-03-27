@@ -27,7 +27,7 @@ Call ends → SignalWire POSTs analytics to agent's /post_prompt/ endpoint
 The agent auto-detects its own public URL -- including behind ngrok, load balancers, API Gateway, or any reverse proxy (via `X-Forwarded-Host`, `Forwarded` header, or `SWML_PROXY_URL_BASE` env var). It embeds Basic Auth credentials directly into the webhook URLs. It generates per-call security tokens for each function. The developer writes none of this:
 
 ```python
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 class WeatherAgent(AgentBase):
     def __init__(self):
@@ -285,7 +285,7 @@ For standalone mode, the SDK provides:
 ## Multi-Agent Hosting
 
 ```python
-from signalwire_agents import AgentServer
+from signalwire import AgentServer
 
 server = AgentServer(host="0.0.0.0", port=3000)
 server.register(SalesAgent(), "/sales")
@@ -354,7 +354,7 @@ The `.swsearch` format is a self-contained SQLite database with embeddings, chun
 Production-ready patterns for common use cases:
 
 ```python
-from signalwire_agents.prefabs import InfoGathererAgent, ReceptionistAgent
+from signalwire.prefabs import InfoGathererAgent, ReceptionistAgent
 
 # Collect structured data
 agent = InfoGathererAgent(questions=[

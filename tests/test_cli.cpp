@@ -48,7 +48,7 @@ TEST(cli_readme_exists) {
 
 TEST(cli_include_directory_structure) {
     // Verify the include directory has the expected structure
-    FILE* f = fopen(project_path("include/signalwire/signalwire_agents.hpp").c_str(), "r");
+    FILE* f = fopen(project_path("include/signalwire/signalwire.hpp").c_str(), "r");
     ASSERT_TRUE(f != nullptr);
     fclose(f);
     return true;

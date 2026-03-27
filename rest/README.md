@@ -7,12 +7,12 @@ required -- just standard HTTP requests.
 ## Quick Start
 
 ```cpp
-#include <signalwire/rest/signalwire_client.hpp>
+#include <signalwire/rest/rest_client.hpp>
 
 using namespace signalwire::rest;
 
 int main() {
-    auto client = SignalWireClient::from_env();
+    auto client = RestClient::from_env();
 
     // List AI agents
     auto agents = client.fabric().agents.list();
@@ -31,11 +31,11 @@ int main() {
 
 ## Features
 
-- Single `SignalWireClient` with namespaced sub-objects for every API
+- Single `RestClient` with namespaced sub-objects for every API
 - 21 API namespaces: Fabric, Calling, Phone Numbers, Datasphere, Video, Compat, and more
 - Generic CRUD resources with `list()`, `create()`, `get()`, `update()`, `del()`
 - Specialized methods per namespace (dial, search, lookup, publish, etc.)
-- Environment variable configuration (`SignalWireClient::from_env()`)
+- Environment variable configuration (`RestClient::from_env()`)
 - JSON dict returns via nlohmann/json -- no wrapper objects to learn
 
 ## Namespaces

@@ -34,7 +34,7 @@ The tool automatically detects function types, provides appropriate execution en
 
 ## Installation
 
-Install as part of the signalwire_agents package:
+Install as part of the signalwire package:
 
 ```bash
 pip install -e .

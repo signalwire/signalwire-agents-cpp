@@ -112,7 +112,7 @@ result.pay(
 )
 
 # Advanced payment with custom prompts
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire.core.function_result import SwaigFunctionResult
 
 # Create custom prompts
 welcome_actions = [

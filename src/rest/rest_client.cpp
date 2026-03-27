@@ -1,12 +1,12 @@
 // Copyright (c) 2025 SignalWire
 // SPDX-License-Identifier: MIT
-#include "signalwire/rest/signalwire_client.hpp"
+#include "signalwire/rest/rest_client.hpp"
 #include "signalwire/common.hpp"
 
 namespace signalwire {
 namespace rest {
 
-SignalWireClient::SignalWireClient(const std::string& space,
+RestClient::RestClient(const std::string& space,
                                    const std::string& project_id,
                                    const std::string& token) {
     std::string base_url = "https://" + space;
@@ -35,7 +35,7 @@ SignalWireClient::SignalWireClient(const std::string& space,
     chat_ = std::make_unique<ChatNamespace>(*client_);
 }
 
-SignalWireClient SignalWireClient::from_env() {
+RestClient RestClient::from_env() {
     std::string space = get_env("SIGNALWIRE_SPACE");
     std::string project = get_env("SIGNALWIRE_PROJECT_ID");
     std::string token = get_env("SIGNALWIRE_API_TOKEN");
@@ -45,7 +45,7 @@ SignalWireClient SignalWireClient::from_env() {
             "Missing required env vars: SIGNALWIRE_SPACE, SIGNALWIRE_PROJECT_ID, SIGNALWIRE_API_TOKEN");
     }
 
-    return SignalWireClient(space, project, token);
+    return RestClient(space, project, token);
 }
 
 } // namespace rest

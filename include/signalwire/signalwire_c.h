@@ -5,8 +5,8 @@
  * Provides an extern "C" API for FFI from C, Python, Ruby, etc.
  */
 
-#ifndef SIGNALWIRE_AGENTS_C_H
-#define SIGNALWIRE_AGENTS_C_H
+#ifndef SIGNALWIRE_C_H
+#define SIGNALWIRE_C_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -147,4 +147,4 @@ void sw_result_destroy(sw_function_result_t result);
 } /* extern "C" */
 #endif
 
-#endif /* SIGNALWIRE_AGENTS_C_H */
+#endif /* SIGNALWIRE_C_H */

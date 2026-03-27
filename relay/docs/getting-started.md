@@ -31,7 +31,7 @@ Alternatively, you can authenticate with a JWT token:
 ## Minimal Example
 
 ```python
-from signalwire_agents.relay import RelayClient
+from signalwire.relay import RelayClient
 
 client = RelayClient(
     project="your-project-id",
@@ -59,7 +59,7 @@ export SIGNALWIRE_SPACE=example.signalwire.com
 ```
 
 ```python
-from signalwire_agents.relay import RelayClient
+from signalwire.relay import RelayClient
 
 client = RelayClient(contexts=["default"])
 

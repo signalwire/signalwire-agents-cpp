@@ -1,7 +1,7 @@
 // Copyright (c) 2025 SignalWire — MIT License
 // REST: Upload a document and run a semantic search via Datasphere.
 
-#include <signalwire/rest/signalwire_client.hpp>
+#include <signalwire/rest/rest_client.hpp>
 #include <iostream>
 
 using namespace signalwire::rest;
@@ -9,7 +9,7 @@ using json = nlohmann::json;
 
 int main() {
     try {
-        auto client = SignalWireClient::from_env();
+        auto client = RestClient::from_env();
 
         // Create a document
         std::cout << "Creating document...\n";

@@ -36,7 +36,7 @@ int main() {
 ### C API (for C, Lua, Python FFI, etc.)
 
 ```c
-#include <signalwire/signalwire_agents_c.h>
+#include <signalwire/signalwire_c.h>
 
 sw_function_result_t get_time_handler(const char* args, const char* raw, void* ud) {
     sw_function_result_t result = sw_result_create("The current time is 3:00 PM");
@@ -98,14 +98,14 @@ The test suite contains 258 tests covering all components.
 
 ```bash
 # Compile against the static library
-g++ -std=c++17 -I include -I deps my_agent.cpp -L build -lsignalwire_agents -lssl -lcrypto -lpthread -o my_agent
+g++ -std=c++17 -I include -I deps my_agent.cpp -L build -lsignalwire -lssl -lcrypto -lpthread -o my_agent
 ```
 
 Or add to your CMakeLists.txt:
 
 ```cmake
 add_executable(my_agent my_agent.cpp)
-target_link_libraries(my_agent signalwire_agents)
+target_link_libraries(my_agent signalwire)
 ```
 
 ## Project Structure
@@ -123,8 +123,8 @@ signalwire-agents-cpp/
         prefabs/prefabs.hpp     # Pre-built agent types
         rest/                   # REST client + HTTP client
         security/               # SessionManager (HMAC tokens)
-        signalwire_agents.hpp   # Umbrella header
-        signalwire_agents_c.h   # C wrapper API
+        signalwire.hpp   # Umbrella header
+        signalwire_c.h   # C wrapper API
     src/                        # Implementation files
     tests/                      # 258 unit tests
     examples/                   # 37+ standalone examples
@@ -218,7 +218,7 @@ gatherer.run();
 ### REST Client
 
 ```cpp
-auto client = rest::SignalWireClient::from_env();
+auto client = rest::RestClient::from_env();
 auto agents = client.fabric().agents.list();
 auto result = client.calling().dial({{"to", "+15551234567"}, {"from", "+15559876543"}});
 ```

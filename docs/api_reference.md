@@ -2682,7 +2682,7 @@ Create a simple API integration tool.
 
 **Usage:**
 ```python
-from signalwire_agents.core.data_map import create_simple_api_tool
+from signalwire.core.data_map import create_simple_api_tool
 
 weather = create_simple_api_tool(
     name='get_weather',
@@ -2711,7 +2711,7 @@ Create a pattern-based tool without API calls.
 
 **Usage:**
 ```python
-from signalwire_agents.core.data_map import create_expression_tool
+from signalwire.core.data_map import create_expression_tool
 
 file_control = create_expression_tool(
     name='file_control',
@@ -3014,9 +3014,9 @@ agent.add_skill("native_vector_search", {
 Create a new skill by extending `SkillBase`:
 
 ```python
-from signalwire_agents.core.skill_base import SkillBase
-from signalwire_agents.core.data_map import DataMap
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire.core.skill_base import SkillBase
+from signalwire.core.data_map import DataMap
+from signalwire.core.function_result import SwaigFunctionResult
 
 class CustomSkill(SkillBase):
     SKILL_NAME = "custom_skill"
@@ -3065,9 +3065,9 @@ class CustomSkill(SkillBase):
 
 #### Skill Registration
 
-Skills are automatically discovered from the `signalwire_agents/skills/` directory. To register a custom skill:
+Skills are automatically discovered from the `signalwire/skills/` directory. To register a custom skill:
 
-1. Create directory: `signalwire_agents/skills/your_skill/`
+1. Create directory: `signalwire/skills/your_skill/`
 2. Add `__init__.py`, `skill.py`, and `README.md`
 3. Implement your skill class in `skill.py`
 4. The skill will be automatically available
@@ -3100,7 +3100,7 @@ SWAIGFunction(
 #### Usage
 
 ```python
-from signalwire_agents.core.swaig_function import SWAIGFunction
+from signalwire.core.swaig_function import SWAIGFunction
 
 # Create SWAIG function
 swaig_func = SWAIGFunction(
@@ -3208,7 +3208,7 @@ agent.add_skill("web_search", {
 Here's a comprehensive example using multiple SDK components:
 
 ```python
-from signalwire_agents import AgentBase, SwaigFunctionResult, DataMap
+from signalwire import AgentBase, SwaigFunctionResult, DataMap
 
 class ComprehensiveAgent(AgentBase):
     def __init__(self):

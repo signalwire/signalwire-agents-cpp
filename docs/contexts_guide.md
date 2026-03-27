@@ -107,7 +107,7 @@ The system provides fine-grained control over conversation flow:
 ### Basic Single-Context Workflow
 
 ```python
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 class OnboardingAgent(AgentBase):
     def __init__(self):
@@ -1328,8 +1328,8 @@ Start with simple single-context workflows and gradually build more complex mult
 To switch contexts dynamically during a conversation, use `SwaigFunctionResult` with the `swml_change_context()` method:
 
 ```python
-from signalwire_agents import AgentBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import AgentBase
+from signalwire.core.function_result import SwaigFunctionResult
 
 class MultiContextAgent(AgentBase):
     def __init__(self):
@@ -1375,7 +1375,7 @@ For a complete example of multi-context agents with different personas, see `exa
 Collects a travel profile with typed questions and confirmation, then recommends destinations:
 
 ```python
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 class TravelAgent(AgentBase):
     def __init__(self):
@@ -1420,7 +1420,7 @@ class TravelAgent(AgentBase):
 Gathers issue details, then routes to the right team using normal mode navigation:
 
 ```python
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 class SupportAgent(AgentBase):
     def __init__(self):
