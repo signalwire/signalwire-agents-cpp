@@ -1,9 +1,11 @@
 #pragma once
 
+#include <functional>
 #include <string>
 #include <vector>
 #include <map>
 #include <optional>
+#include <set>
 #include <variant>
 #include <stdexcept>
 #include <nlohmann/json.hpp>
@@ -15,6 +17,16 @@ using json = nlohmann::json;
 
 constexpr int MAX_CONTEXTS = 50;
 constexpr int MAX_STEPS_PER_CONTEXT = 100;
+
+/// Reserved tool names auto-injected by the runtime when contexts/steps are
+/// present. User-defined SWAIG tools must not collide with these names:
+///   - next_step / change_context are injected when valid_steps or
+///     valid_contexts is set so the model can navigate the flow.
+///   - gather_submit is injected while a step's gather_info is collecting
+///     answers.
+/// ContextBuilder::validate() rejects any agent that registers a user tool
+/// sharing one of these names.
+const std::set<std::string>& reserved_native_tool_names();
 
 // ============================================================================
 // GatherQuestion
@@ -89,7 +101,35 @@ public:
     /// Set step completion criteria
     Step& set_step_criteria(const std::string& criteria);
 
-    /// Set which functions are available ("none" disables all, or list of names)
+    /// Set which non-internal functions are callable while this step is
+    /// active.
+    ///
+    /// IMPORTANT — inheritance behavior:
+    ///   If you do NOT call this method, the step inherits whichever
+    ///   function set was active on the previous step (or the previous
+    ///   context's last step). The server-side runtime only resets the
+    ///   active set when a step explicitly declares its `functions`
+    ///   field. This is the most common source of bugs in multi-step
+    ///   agents: forgetting set_functions on a later step lets the
+    ///   previous step's tools leak through. Best practice is to call
+    ///   set_functions explicitly on every step that should differ from
+    ///   the previous one.
+    ///
+    /// Keep the per-step active set small: LLM tool selection accuracy
+    /// degrades noticeably past ~7-8 simultaneously-active tools per
+    /// call. Use per-step whitelisting to partition large tool
+    /// collections.
+    ///
+    /// Internal functions (e.g. gather_submit, hangup hook) are ALWAYS
+    /// protected and cannot be deactivated by this whitelist. The
+    /// native navigation tools next_step and change_context are
+    /// injected automatically when set_valid_steps / set_valid_contexts
+    /// is used; they are not affected by this list.
+    ///
+    /// @param functions One of:
+    ///   - std::vector<std::string> — whitelist of allowed names
+    ///   - empty std::vector — disable all user functions
+    ///   - std::string "none" — synonym for the empty vector
     Step& set_functions(const std::variant<std::string, std::vector<std::string>>& functions);
 
     /// Set which steps can be navigated to from this step
@@ -98,7 +138,18 @@ public:
     /// Set which contexts can be navigated to from this step
     Step& set_valid_contexts(const std::vector<std::string>& ctxs);
 
-    /// Set whether the conversation should end after this step
+    /// Mark this step as terminal for the step flow.
+    ///
+    /// IMPORTANT: end=true does NOT end the conversation or hang up
+    /// the call. It exits step mode entirely after this step executes
+    /// — clearing the steps list, current step index, valid_steps, and
+    /// valid_contexts. The agent keeps running, but operates only
+    /// under the base system prompt and the context-level prompt; no
+    /// more step instructions are injected and no more next_step tool
+    /// is offered.
+    ///
+    /// To actually end the call, call a hangup tool or define a
+    /// hangup hook.
     Step& set_end(bool end);
 
     /// Set whether to skip waiting for user input
@@ -112,7 +163,26 @@ public:
                            const std::string& completion_action = "",
                            const std::string& prompt = "");
 
-    /// Add a gather question (set_gather_info must be called first)
+    /// Add a gather question (set_gather_info must be called first).
+    ///
+    /// IMPORTANT — gather mode locks function access:
+    ///   While the model is asking gather questions, the runtime
+    ///   forcibly deactivates ALL of the step's other functions. The
+    ///   only callable tools during a gather question are:
+    ///
+    ///     - gather_submit (the native answer-submission tool)
+    ///     - Whatever names you pass in this question's `functions`
+    ///       argument
+    ///
+    ///   next_step and change_context are also filtered out — the
+    ///   model cannot navigate away until the gather completes. This
+    ///   is by design: it forces a tight ask → submit → next-question
+    ///   loop.
+    ///
+    ///   If a question needs to call out to a tool (e.g. validate an
+    ///   email, geocode a ZIP), list that tool name in this question's
+    ///   `functions` argument. Functions listed here are active ONLY
+    ///   for this question.
     Step& add_gather_question(const std::string& key, const std::string& question,
                                const std::string& type = "string", bool confirm = false,
                                const std::string& prompt = "",
@@ -204,7 +274,24 @@ public:
     /// Set user prompt
     Context& set_user_prompt(const std::string& up);
 
-    /// Set isolated mode
+    /// Mark this context as isolated — entering it wipes conversation
+    /// history.
+    ///
+    /// When isolated=true and the context is entered via
+    /// change_context, the runtime wipes the conversation array. The
+    /// model starts fresh with only the new context's system_prompt +
+    /// step instructions, with no memory of prior turns.
+    ///
+    /// EXCEPTION — reset overrides the wipe:
+    ///   If the context also has a reset configuration (via
+    ///   set_consolidate or set_full_reset), the wipe is skipped in
+    ///   favor of the reset behavior. Use reset with consolidate=true
+    ///   to summarize prior history into a single message instead of
+    ///   dropping it entirely.
+    ///
+    /// Use cases: switching to a sensitive billing flow that should
+    /// not see prior small-talk; handing off to a different agent
+    /// persona; resetting after a long off-topic detour.
     Context& set_isolated(bool isolated);
 
     /// Set prompt text directly
@@ -272,6 +359,33 @@ private:
 // ContextBuilder
 // ============================================================================
 
+/// Builder for multi-step, multi-context AI agent workflows.
+///
+/// A ContextBuilder owns one or more Contexts; each Context owns an ordered
+/// list of Steps. Only one context and one step is active at a time. Per
+/// chat turn, the runtime injects the current step's instructions as a
+/// system message, then asks the LLM for a response.
+///
+/// ## Native tools auto-injected by the runtime
+///
+/// When a step (or its enclosing context) declares valid_steps or
+/// valid_contexts, the runtime auto-injects two native tools so the model
+/// can navigate the flow:
+///
+///   - next_step(step: enum)         — present when valid_steps is set
+///   - change_context(context: enum) — present when valid_contexts is set
+///
+/// A third native tool — gather_submit — is injected during gather_info
+/// questioning. These three names are reserved: validate() rejects any
+/// agent that defines a SWAIG tool with one of them. See
+/// reserved_native_tool_names().
+///
+/// ## Function whitelisting (Step::set_functions)
+///
+/// Each step may declare a functions whitelist. The whitelist is applied
+/// in-memory at the start of each LLM turn. CRITICALLY: if a step does NOT
+/// declare a functions field, it INHERITS the previous step's active set.
+/// See Step::set_functions for details and examples.
 class ContextBuilder {
 public:
     ContextBuilder() = default;
@@ -282,7 +396,20 @@ public:
     /// Get an existing context
     Context* get_context(const std::string& name);
 
-    /// Validate all contexts
+    /// Attach a tool-name supplier so validate() can check
+    /// user-defined SWAIG tool names against
+    /// reserved_native_tool_names(). AgentBase::define_contexts()
+    /// wires this up automatically.
+    ContextBuilder& attach_tool_name_supplier(
+        std::function<std::vector<std::string>()> supplier);
+
+    /// Validate all contexts. Checks:
+    ///   - At least one context is defined
+    ///   - A single context must be named "default"
+    ///   - Every context has at least one step
+    ///   - gather_info completion_action targets an existing step
+    ///   - No user-defined SWAIG tool collides with a reserved
+    ///     native name (via the attached tool-name supplier)
     void validate() const;
 
     /// Serialize all contexts to JSON
@@ -293,6 +420,7 @@ public:
 private:
     std::map<std::string, Context> contexts_;
     std::vector<std::string> context_order_;
+    std::function<std::vector<std::string>()> tool_name_supplier_;
 };
 
 } // namespace contexts

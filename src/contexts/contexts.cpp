@@ -2,8 +2,19 @@
 // SPDX-License-Identifier: MIT
 #include "signalwire/contexts/contexts.hpp"
 
+#include <algorithm>
+
 namespace signalwire {
 namespace contexts {
+
+const std::set<std::string>& reserved_native_tool_names() {
+    static const std::set<std::string> kReserved{
+        "next_step",
+        "change_context",
+        "gather_submit",
+    };
+    return kReserved;
+}
 
 // ============================================================================
 // GatherQuestion
@@ -392,10 +403,117 @@ Context* ContextBuilder::get_context(const std::string& name) {
     return it != contexts_.end() ? &it->second : nullptr;
 }
 
+ContextBuilder& ContextBuilder::attach_tool_name_supplier(
+    std::function<std::vector<std::string>()> supplier) {
+    tool_name_supplier_ = std::move(supplier);
+    return *this;
+}
+
 void ContextBuilder::validate() const {
+    if (contexts_.empty()) {
+        throw std::runtime_error("At least one context must be defined");
+    }
+
     if (contexts_.size() == 1) {
         if (contexts_.begin()->first != "default") {
-            throw std::runtime_error("Single context must be named 'default'");
+            throw std::runtime_error(
+                "When using a single context, it must be named 'default'");
+        }
+    }
+
+    // Each context must have at least one step.
+    for (const auto& [name, ctx] : contexts_) {
+        if (!ctx.has_steps()) {
+            throw std::runtime_error(
+                "Context '" + name + "' must have at least one step");
+        }
+    }
+
+    // Validate gather_info completion_action references.
+    for (const auto& [ctx_name, ctx] : contexts_) {
+        const auto& order = ctx.step_order();
+        const auto& steps = ctx.steps();
+        for (std::size_t i = 0; i < order.size(); ++i) {
+            const auto& step_name = order[i];
+            auto it = steps.find(step_name);
+            if (it == steps.end()) continue;
+            const auto& gi_opt = it->second.gather_info();
+            if (!gi_opt.has_value()) continue;
+            const auto& action = gi_opt->completion_action();
+            if (action.empty()) continue;
+
+            if (action == "next_step") {
+                if (i + 1 >= order.size()) {
+                    throw std::runtime_error(
+                        "Step '" + step_name + "' in context '" + ctx_name +
+                        "' has gather_info completion_action='next_step' but "
+                        "it is the last step in the context. Either "
+                        "(1) add another step after '" + step_name + "', "
+                        "(2) set completion_action to the name of an "
+                        "existing step in this context to jump to it, or "
+                        "(3) leave completion_action empty (default) to "
+                        "stay in '" + step_name + "' after gathering "
+                        "completes.");
+                }
+            } else if (steps.find(action) == steps.end()) {
+                std::vector<std::string> available;
+                for (const auto& [k, _] : steps) available.push_back(k);
+                std::sort(available.begin(), available.end());
+                std::string avail_str = "[";
+                for (std::size_t j = 0; j < available.size(); ++j) {
+                    if (j > 0) avail_str += ", ";
+                    avail_str += "'" + available[j] + "'";
+                }
+                avail_str += "]";
+                throw std::runtime_error(
+                    "Step '" + step_name + "' in context '" + ctx_name +
+                    "' has gather_info completion_action='" + action +
+                    "' but '" + action + "' is not a step in this context. "
+                    "Valid options: 'next_step' (advance to the next "
+                    "sequential step), empty string (stay in the current "
+                    "step), or one of " + avail_str + ".");
+            }
+        }
+    }
+
+    // Validate that user-defined tools do not collide with reserved native
+    // tool names. The runtime auto-injects next_step / change_context /
+    // gather_submit when contexts/steps are present, so user tools sharing
+    // those names would never be called.
+    if (tool_name_supplier_) {
+        const auto& reserved = reserved_native_tool_names();
+        const auto registered = tool_name_supplier_();
+        std::vector<std::string> colliding;
+        for (const auto& name : registered) {
+            if (reserved.count(name) > 0) {
+                colliding.push_back(name);
+            }
+        }
+        if (!colliding.empty()) {
+            std::sort(colliding.begin(), colliding.end());
+            colliding.erase(std::unique(colliding.begin(), colliding.end()),
+                            colliding.end());
+
+            auto format_list = [](const std::vector<std::string>& v) {
+                std::string s = "[";
+                for (std::size_t j = 0; j < v.size(); ++j) {
+                    if (j > 0) s += ", ";
+                    s += "'" + v[j] + "'";
+                }
+                s += "]";
+                return s;
+            };
+            std::vector<std::string> reserved_sorted(reserved.begin(),
+                                                     reserved.end());
+            std::sort(reserved_sorted.begin(), reserved_sorted.end());
+
+            throw std::runtime_error(
+                "Tool name(s) " + format_list(colliding) + " collide with "
+                "reserved native tools auto-injected by contexts/steps. "
+                "The names " + format_list(reserved_sorted) + " are "
+                "reserved and cannot be used for user-defined SWAIG tools "
+                "when contexts/steps are in use. Rename your tool(s) to "
+                "avoid the collision.");
         }
     }
 }

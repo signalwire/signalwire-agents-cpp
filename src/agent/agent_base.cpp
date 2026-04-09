@@ -7,6 +7,7 @@
 #include <openssl/crypto.h>
 #include <openssl/rand.h>
 #include <algorithm>
+#include <set>
 
 namespace signalwire {
 namespace agent {
@@ -287,7 +288,58 @@ AgentBase& AgentBase::set_native_functions(const std::vector<std::string>& funcs
     return *this;
 }
 
+const std::set<std::string>& AgentBase::supported_internal_filler_names() {
+    static const std::set<std::string> kSupported{
+        "hangup",                   // AI is hanging up the call
+        "check_time",               // AI is checking the time
+        "wait_for_user",            // AI is waiting for user input
+        "wait_seconds",             // deliberate pause / wait period
+        "adjust_response_latency",  // AI is adjusting response timing
+        "next_step",                // transitioning between steps in prompt.contexts
+        "change_context",           // switching between contexts in prompt.contexts
+        "get_visual_input",         // processing visual input (enable_vision)
+        "get_ideal_strategy",       // thinking (enable_thinking)
+    };
+    return kSupported;
+}
+
+static std::string sorted_list_str(const std::set<std::string>& s) {
+    std::vector<std::string> v(s.begin(), s.end());
+    std::sort(v.begin(), v.end());
+    std::string out = "[";
+    for (std::size_t i = 0; i < v.size(); ++i) {
+        if (i > 0) out += ", ";
+        out += "'" + v[i] + "'";
+    }
+    out += "]";
+    return out;
+}
+
 AgentBase& AgentBase::set_internal_fillers(const json& fillers) {
+    if (fillers.is_object()) {
+        const auto& supported = supported_internal_filler_names();
+        std::vector<std::string> unknown;
+        for (auto it = fillers.begin(); it != fillers.end(); ++it) {
+            if (supported.count(it.key()) == 0) {
+                unknown.push_back(it.key());
+            }
+        }
+        if (!unknown.empty()) {
+            std::sort(unknown.begin(), unknown.end());
+            std::string unknown_str = "[";
+            for (std::size_t i = 0; i < unknown.size(); ++i) {
+                if (i > 0) unknown_str += ", ";
+                unknown_str += "'" + unknown[i] + "'";
+            }
+            unknown_str += "]";
+            get_logger().warn(
+                "unknown_internal_filler_names: " + unknown_str +
+                ". set_internal_fillers received names that the SWML "
+                "schema does not recognize. Those entries will be "
+                "ignored by the runtime. Supported names: " +
+                sorted_list_str(supported) + ".");
+        }
+    }
     internal_fillers_ = fillers;
     return *this;
 }
@@ -296,6 +348,27 @@ AgentBase& AgentBase::add_internal_filler(const std::string& lang,
                                            const std::vector<std::string>& fillers) {
     if (internal_fillers_.is_null()) internal_fillers_ = json::object();
     internal_fillers_[lang] = fillers;
+    return *this;
+}
+
+AgentBase& AgentBase::add_internal_filler(const std::string& function_name,
+                                           const std::string& language_code,
+                                           const std::vector<std::string>& fillers) {
+    const auto& supported = supported_internal_filler_names();
+    if (supported.count(function_name) == 0) {
+        get_logger().warn(
+            "unknown_internal_filler_name: '" + function_name +
+            "'. add_internal_filler received a function name the SWML "
+            "schema does not recognize. The entry will be stored but "
+            "the runtime will not play these fillers. Supported "
+            "names: " + sorted_list_str(supported) + ".");
+    }
+    if (internal_fillers_.is_null()) internal_fillers_ = json::object();
+    if (!internal_fillers_.contains(function_name) ||
+        !internal_fillers_[function_name].is_object()) {
+        internal_fillers_[function_name] = json::object();
+    }
+    internal_fillers_[function_name][language_code] = fillers;
     return *this;
 }
 
@@ -359,6 +432,12 @@ AgentBase& AgentBase::clear_post_ai_verbs() { post_ai_verbs_.clear(); return *th
 contexts::ContextBuilder& AgentBase::define_contexts() {
     if (!context_builder_) {
         context_builder_ = contexts::ContextBuilder();
+        // Attach a tool-name supplier so validate() can check
+        // user-defined tool names against reserved native tool names
+        // (next_step, change_context, gather_submit).
+        context_builder_->attach_tool_name_supplier([this]() {
+            return this->list_tools();
+        });
     }
     return *context_builder_;
 }
@@ -656,6 +735,7 @@ void AgentBase::init_auth() {
     std::string env_pass = get_env("SWML_BASIC_AUTH_PASSWORD");
 
     auth_user_ = env_user.empty() ? name_ : env_user;
+    bool password_auto_generated = false;
     if (!env_pass.empty()) {
         auth_pass_ = env_pass;
     } else {
@@ -672,9 +752,26 @@ void AgentBase::init_auth() {
             hex += h;
         }
         auth_pass_ = hex;
+        password_auto_generated = true;
     }
     auth_initialized_ = true;
     get_logger().info("Auth configured for user: " + auth_user_);
+
+    // Warn loudly if the password was auto-generated. This is the silent
+    // cause of every external caller hitting HTTP 401 when .env wasn't
+    // loaded — the password lives only in this process and changes on
+    // every restart.
+    if (password_auto_generated) {
+        get_logger().warn(
+            "basic_auth_password_autogenerated: username=\"" + auth_user_ +
+            "\". No SWML_BASIC_AUTH_PASSWORD found in environment and no "
+            "password passed via set_auth(). The SDK generated a random "
+            "password that exists only in this process; external callers "
+            "will get HTTP 401 unless they read the value from this "
+            "process's env. To fix, set SWML_BASIC_AUTH_USER and "
+            "SWML_BASIC_AUTH_PASSWORD in your environment, or call "
+            "agent.set_auth(user, pass) before serving.");
+    }
 }
 
 // ============================================================================

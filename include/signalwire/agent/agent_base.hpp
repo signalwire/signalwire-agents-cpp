@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <set>
 #include <unordered_map>
 #include <functional>
 #include <memory>
@@ -155,6 +156,57 @@ public:
     // Tool Methods
     // ========================================================================
 
+    /// Register a SWAIG tool (function) that the AI can invoke during a
+    /// call.
+    ///
+    /// ## How this becomes a tool the model sees
+    ///
+    /// A SWAIG function is *exactly the same concept* as a "tool" in
+    /// native OpenAI / Anthropic tool calling. On every LLM turn, the
+    /// SDK renders each registered SWAIG function into the OpenAI tool
+    /// schema:
+    ///
+    ///   {
+    ///     "type": "function",
+    ///     "function": {
+    ///       "name":        "your_name_here",
+    ///       "description": "your description text",
+    ///       "parameters":  { ... your JSON schema ... }
+    ///     }
+    ///   }
+    ///
+    /// That schema is sent to the model as part of the same API call
+    /// that produces the next assistant message. The model reads:
+    ///   - the function `description` to decide WHEN to call this tool
+    ///   - each parameter `description` (inside `parameters`) to decide
+    ///     HOW to fill in that argument from the user's utterance
+    ///
+    /// This means *descriptions are prompt engineering*, not developer
+    /// comments. A vague description is the #1 cause of "the model has
+    /// the right tool but doesn't call it" failures.
+    ///
+    /// ## Bad vs good descriptions
+    ///
+    ///   BAD : description: "Lookup function"
+    ///   GOOD: description: "Look up a customer's account details by "
+    ///                       "account number. Use this BEFORE quoting "
+    ///                       "any account-specific info (balance, plan, "
+    ///                       "status). Do not use for general product "
+    ///                       "questions."
+    ///
+    ///   BAD : parameters: {"id": {"type": "string",
+    ///                              "description": "the id"}}
+    ///   GOOD: parameters: {"account_number": {"type": "string",
+    ///             "description": "The customer's 8-digit account "
+    ///             "number, no dashes or spaces. Ask the user if they "
+    ///             "don't provide it."}}
+    ///
+    /// ## Tool count matters
+    ///
+    /// LLM tool selection accuracy degrades past ~7-8
+    /// simultaneously-active tools per call. Use
+    /// contexts::Step::set_functions to partition tools across steps
+    /// so only the relevant subset is active at any moment.
     AgentBase& define_tool(const swaig::ToolDefinition& tool);
     AgentBase& define_tool(const std::string& name, const std::string& description,
                             const json& parameters, swaig::ToolHandler handler,
@@ -184,8 +236,51 @@ public:
     AgentBase& set_global_data(const json& data);
     AgentBase& update_global_data(const json& data);
     AgentBase& set_native_functions(const std::vector<std::string>& funcs);
+    /// The complete set of internal SWAIG function names that accept
+    /// fillers, matching the SWAIGInternalFiller schema definition.
+    /// Any name outside this set is silently ignored by the runtime —
+    /// set_internal_fillers and add_internal_filler warn if you pass
+    /// an unknown name.
+    ///
+    /// Notable absences: change_step, gather_submit, and arbitrary
+    /// user-defined SWAIG function names are NOT supported.
+    static const std::set<std::string>& supported_internal_filler_names();
+
+    /// Set internal fillers for native SWAIG functions.
+    ///
+    /// Internal fillers are short phrases the AI agent speaks (via
+    /// TTS) while an internal/native function is running, so the
+    /// caller doesn't hear dead air during transitions or background
+    /// work.
+    ///
+    /// Supported function names (match the SWAIGInternalFiller
+    /// schema): hangup, check_time, wait_for_user, wait_seconds,
+    /// adjust_response_latency, next_step, change_context,
+    /// get_visual_input, get_ideal_strategy. See
+    /// supported_internal_filler_names().
+    ///
+    /// Notably NOT supported: change_step, gather_submit, or arbitrary
+    /// user-defined SWAIG function names. The runtime only honors
+    /// fillers for the names listed above; everything else is
+    /// silently ignored at the SWML level. This method warns at
+    /// registration time if you pass an unknown name so you catch the
+    /// typo early.
+    ///
+    /// Expected JSON shape:
+    ///   {"function_name": {"language_code": ["phrase1", ...]}, ...}
     AgentBase& set_internal_fillers(const json& fillers);
+
+    /// Add internal fillers for a single language (legacy overload;
+    /// stored under the given language key at the top level).
     AgentBase& add_internal_filler(const std::string& lang,
+                                    const std::vector<std::string>& fillers);
+
+    /// Add internal fillers for a single internal function + language.
+    /// See set_internal_fillers() for the complete list of supported
+    /// function_name values (supported_internal_filler_names()) and
+    /// what fillers do. Names outside the supported set log a warning.
+    AgentBase& add_internal_filler(const std::string& function_name,
+                                    const std::string& language_code,
                                     const std::vector<std::string>& fillers);
     AgentBase& enable_debug_events(bool enable = true);
     AgentBase& add_function_include(const json& include);

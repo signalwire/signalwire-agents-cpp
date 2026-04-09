@@ -19,13 +19,45 @@ class DataMap {
 public:
     explicit DataMap(const std::string& function_name);
 
-    /// Set function purpose/description
+    /// Set the LLM-facing tool description (the "purpose"). PROMPT
+    /// ENGINEERING, not developer documentation.
+    ///
+    /// The description string is rendered into the OpenAI tool schema
+    /// `description` field on every LLM turn. The model reads it to
+    /// decide WHEN to call this tool. A vague purpose() is the #1
+    /// cause of "the model has the right tool but doesn't call it"
+    /// failures with data-map tools.
+    ///
+    /// Bad vs good:
+    ///   BAD : .purpose("weather api")
+    ///   GOOD: .purpose("Get the current weather conditions and "
+    ///                  "forecast for a specific city. Use this "
+    ///                  "whenever the user asks about weather, "
+    ///                  "temperature, rain, or similar conditions in "
+    ///                  "a named location.")
     DataMap& purpose(const std::string& desc);
 
-    /// Alias for purpose()
+    /// Alias for purpose(). Sets the LLM-facing tool description.
+    /// This string is read by the model to decide WHEN to call this
+    /// tool. See purpose() for bad-vs-good examples.
     DataMap& description(const std::string& desc);
 
-    /// Add a function parameter
+    /// Add a parameter to this data-map tool — the `desc` is
+    /// LLM-FACING.
+    ///
+    /// Each parameter description is rendered into the OpenAI tool
+    /// schema under parameters.properties.<name>.description and sent
+    /// to the model. The model uses it to decide HOW to fill in the
+    /// argument from user speech. It is prompt engineering, not
+    /// developer FYI.
+    ///
+    /// Bad vs good:
+    ///   BAD : .parameter("city", "string", "the city")
+    ///   GOOD: .parameter("city", "string",
+    ///             "The name of the city to get weather for, e.g. "
+    ///             "'San Francisco'. Ask the user if they did not "
+    ///             "provide one. Include the state or country if the "
+    ///             "city name is ambiguous.")
     DataMap& parameter(const std::string& name, const std::string& param_type,
                        const std::string& desc, bool required = false,
                        const std::vector<std::string>& enum_values = {});
