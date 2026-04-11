@@ -253,6 +253,12 @@ public:
     /// Move a step to a specific position
     Context& move_step(const std::string& name, int position);
 
+    /// Set which step the context starts on when entered.
+    ///
+    /// By default, a context starts on its first step (index 0). Use
+    /// this to skip a preamble step on re-entry via change_context.
+    Context& set_initial_step(const std::string& step_name);
+
     /// Set valid contexts for navigation
     Context& set_valid_contexts(const std::vector<std::string>& ctxs);
 
@@ -328,6 +334,7 @@ public:
     bool has_steps() const { return !steps_.empty(); }
     const std::map<std::string, Step>& steps() const { return steps_; }
     const std::vector<std::string>& step_order() const { return step_order_; }
+    const std::optional<std::string>& initial_step() const { return initial_step_; }
     const std::optional<std::vector<std::string>>& valid_contexts() const { return valid_contexts_; }
 
 private:
@@ -337,6 +344,7 @@ private:
     std::string name_;
     std::map<std::string, Step> steps_;
     std::vector<std::string> step_order_;
+    std::optional<std::string> initial_step_;
     std::optional<std::vector<std::string>> valid_contexts_;
     std::optional<std::vector<std::string>> valid_steps_;
 
@@ -389,6 +397,9 @@ private:
 class ContextBuilder {
 public:
     ContextBuilder() = default;
+
+    /// Remove all contexts, returning the builder to its initial state.
+    ContextBuilder& reset();
 
     /// Add a new context
     Context& add_context(const std::string& name);

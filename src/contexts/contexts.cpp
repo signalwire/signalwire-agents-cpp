@@ -264,6 +264,11 @@ Context& Context::move_step(const std::string& name, int position) {
     return *this;
 }
 
+Context& Context::set_initial_step(const std::string& step_name) {
+    initial_step_ = step_name;
+    return *this;
+}
+
 Context& Context::set_valid_contexts(const std::vector<std::string>& ctxs) {
     valid_contexts_ = ctxs;
     return *this;
@@ -369,6 +374,7 @@ json Context::to_json() const {
     if (!enter_fillers_.is_null()) j["enter_fillers"] = enter_fillers_;
     if (!exit_fillers_.is_null()) j["exit_fillers"] = exit_fillers_;
 
+    if (initial_step_) j["initial_step"] = *initial_step_;
     if (valid_contexts_) j["valid_contexts"] = *valid_contexts_;
     if (valid_steps_) j["valid_steps"] = *valid_steps_;
 
@@ -388,6 +394,12 @@ json Context::to_json() const {
 // ============================================================================
 // ContextBuilder
 // ============================================================================
+
+ContextBuilder& ContextBuilder::reset() {
+    contexts_.clear();
+    context_order_.clear();
+    return *this;
+}
 
 Context& ContextBuilder::add_context(const std::string& name) {
     if (contexts_.size() >= static_cast<size_t>(MAX_CONTEXTS)) {
@@ -426,6 +438,27 @@ void ContextBuilder::validate() const {
         if (!ctx.has_steps()) {
             throw std::runtime_error(
                 "Context '" + name + "' must have at least one step");
+        }
+    }
+
+    // Validate initial_step references a real step in the context.
+    for (const auto& [name, ctx] : contexts_) {
+        if (ctx.initial_step().has_value()) {
+            const auto& is = *ctx.initial_step();
+            if (ctx.steps().find(is) == ctx.steps().end()) {
+                std::vector<std::string> available;
+                for (const auto& [k, _] : ctx.steps()) available.push_back(k);
+                std::sort(available.begin(), available.end());
+                std::string avail_str = "[";
+                for (std::size_t i = 0; i < available.size(); ++i) {
+                    if (i > 0) avail_str += ", ";
+                    avail_str += "'" + available[i] + "'";
+                }
+                avail_str += "]";
+                throw std::runtime_error(
+                    "Context '" + name + "' has initial_step='" + is +
+                    "' but that step does not exist. Available steps: " + avail_str);
+            }
         }
     }
 

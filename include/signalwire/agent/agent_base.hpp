@@ -308,6 +308,10 @@ public:
     contexts::Context& add_context(const std::string& name);
     bool has_contexts() const;
 
+    /// Remove all contexts, returning the agent to a no-contexts state.
+    /// Convenience wrapper around define_contexts().reset().
+    AgentBase& reset_contexts();
+
     // ========================================================================
     // Skills Methods
     // ========================================================================

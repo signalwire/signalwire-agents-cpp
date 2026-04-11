@@ -450,6 +450,13 @@ bool AgentBase::has_contexts() const {
     return context_builder_ && context_builder_->has_contexts();
 }
 
+AgentBase& AgentBase::reset_contexts() {
+    if (context_builder_) {
+        context_builder_->reset();
+    }
+    return *this;
+}
+
 // ============================================================================
 // Skills Methods
 // ============================================================================
