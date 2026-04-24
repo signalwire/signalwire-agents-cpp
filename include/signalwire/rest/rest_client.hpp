@@ -4,8 +4,10 @@
 
 #include <string>
 #include <memory>
+#include <optional>
 #include <nlohmann/json.hpp>
 #include "signalwire/rest/http_client.hpp"
+#include "signalwire/rest/phone_call_handler.hpp"
 
 namespace signalwire {
 namespace rest {
@@ -86,6 +88,151 @@ public:
         json search(const std::map<std::string, std::string>& p) const { return client_.get(base_path_ + "/search", p); }
         json buy(const json& data) const { return client_.post(base_path_ + "/buy", data); }
         json release(const std::string& id) const { return client_.del(base_path_ + "/" + id); }
+
+        // ====================================================================
+        // Typed binding helpers
+        //
+        // Each ``set_*`` helper wraps ``update`` with the right ``call_handler``
+        // value and companion field. The server auto-materializes the matching
+        // Fabric resource; you do NOT need to pre-create ``swml_webhooks``,
+        // ``cxml_webhooks``, or an AI agent and you do NOT need to call
+        // ``assign_phone_route``. See ``rest/docs/phone-binding.md``.
+        //
+        // The ``make_*_body`` static helpers expose the JSON body that the
+        // helper would send — useful for tests or when you need to amend the
+        // body before calling ``update`` directly.
+        // ====================================================================
+
+        /// Options for binding a phone number to a cXML (Twilio-compat) webhook.
+        struct CxmlWebhookOptions {
+            std::optional<std::string> fallback_url;
+            std::optional<std::string> status_callback_url;
+        };
+
+        /// Options for binding a phone number to a call flow.
+        struct CallFlowOptions {
+            /// Accepts ``"working_copy"`` or ``"current_deployed"``
+            /// (server default when omitted).
+            std::optional<std::string> version;
+        };
+
+        /// Options for binding a phone number to a RELAY topic.
+        struct RelayTopicOptions {
+            std::optional<std::string> status_callback_url;
+        };
+
+        // -- Body builders (pure, no side effects — useful for tests) --------
+
+        static json make_swml_webhook_body(const std::string& url) {
+            return {
+                {"call_handler", to_wire_string(PhoneCallHandler::RelayScript)},
+                {"call_relay_script_url", url},
+            };
+        }
+
+        static json make_cxml_webhook_body(const std::string& url,
+                                           const CxmlWebhookOptions& opts = {}) {
+            json body = {
+                {"call_handler", to_wire_string(PhoneCallHandler::LamlWebhooks)},
+                {"call_request_url", url},
+            };
+            if (opts.fallback_url) body["call_fallback_url"] = *opts.fallback_url;
+            if (opts.status_callback_url) body["call_status_callback_url"] = *opts.status_callback_url;
+            return body;
+        }
+
+        static json make_cxml_application_body(const std::string& application_id) {
+            return {
+                {"call_handler", to_wire_string(PhoneCallHandler::LamlApplication)},
+                {"call_laml_application_id", application_id},
+            };
+        }
+
+        static json make_ai_agent_body(const std::string& agent_id) {
+            return {
+                {"call_handler", to_wire_string(PhoneCallHandler::AiAgent)},
+                {"call_ai_agent_id", agent_id},
+            };
+        }
+
+        static json make_call_flow_body(const std::string& flow_id,
+                                        const CallFlowOptions& opts = {}) {
+            json body = {
+                {"call_handler", to_wire_string(PhoneCallHandler::CallFlow)},
+                {"call_flow_id", flow_id},
+            };
+            if (opts.version) body["call_flow_version"] = *opts.version;
+            return body;
+        }
+
+        static json make_relay_application_body(const std::string& name) {
+            return {
+                {"call_handler", to_wire_string(PhoneCallHandler::RelayApplication)},
+                {"call_relay_application", name},
+            };
+        }
+
+        static json make_relay_topic_body(const std::string& topic,
+                                          const RelayTopicOptions& opts = {}) {
+            json body = {
+                {"call_handler", to_wire_string(PhoneCallHandler::RelayTopic)},
+                {"call_relay_topic", topic},
+            };
+            if (opts.status_callback_url) body["call_relay_topic_status_callback_url"] = *opts.status_callback_url;
+            return body;
+        }
+
+        // -- Typed helpers ---------------------------------------------------
+
+        /// Route inbound calls to an SWML webhook URL.
+        /// Server auto-creates a ``swml_webhook`` Fabric resource keyed off
+        /// this URL.
+        json set_swml_webhook(const std::string& resource_id, const std::string& url) const {
+            return update(resource_id, make_swml_webhook_body(url));
+        }
+
+        /// Route inbound calls to a cXML (Twilio-compat / LAML) webhook.
+        /// Despite the wire value ``laml_webhooks`` being plural, this creates
+        /// a single ``cxml_webhook`` Fabric resource. Extra options populate
+        /// fallback and status-callback fields.
+        json set_cxml_webhook(const std::string& resource_id,
+                              const std::string& url,
+                              const CxmlWebhookOptions& opts = {}) const {
+            return update(resource_id, make_cxml_webhook_body(url, opts));
+        }
+
+        /// Route inbound calls to an existing cXML application by ID.
+        json set_cxml_application(const std::string& resource_id,
+                                  const std::string& application_id) const {
+            return update(resource_id, make_cxml_application_body(application_id));
+        }
+
+        /// Route inbound calls to an AI Agent Fabric resource by ID.
+        json set_ai_agent(const std::string& resource_id,
+                          const std::string& agent_id) const {
+            return update(resource_id, make_ai_agent_body(agent_id));
+        }
+
+        /// Route inbound calls to a Call Flow by ID.
+        /// ``opts.version`` accepts ``"working_copy"`` or ``"current_deployed"``.
+        json set_call_flow(const std::string& resource_id,
+                           const std::string& flow_id,
+                           const CallFlowOptions& opts = {}) const {
+            return update(resource_id, make_call_flow_body(flow_id, opts));
+        }
+
+        /// Route inbound calls to a named RELAY application.
+        json set_relay_application(const std::string& resource_id,
+                                   const std::string& name) const {
+            return update(resource_id, make_relay_application_body(name));
+        }
+
+        /// Route inbound calls to a RELAY topic (client subscription).
+        json set_relay_topic(const std::string& resource_id,
+                             const std::string& topic,
+                             const RelayTopicOptions& opts = {}) const {
+            return update(resource_id, make_relay_topic_body(topic, opts));
+        }
     };
 
     struct DatasphereNamespace {

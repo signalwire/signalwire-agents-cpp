@@ -1,183 +1,94 @@
 # Fabric Resources
 
-The Fabric API (`/api/fabric`) manages all resource types in your SignalWire project. Every resource type supports CRUD operations and address listing.
+The Fabric API (`/api/fabric`) manages a subset of SignalWire resource types in your project. Each resource surface below is exactly what this SDK exposes; non-listed resources either aren't exposed (deliberately — e.g. `swml_webhooks` and `cxml_webhooks` are not a creation-surface here, see below) or require a newer SDK release.
 
 ## Standard CRUD Pattern
 
-All 13 resource types share the same methods:
+All exposed resource types share the same methods:
 
-```python
-# List all resources of this type
-items = client.fabric.ai_agents.list()
-items = client.fabric.ai_agents.list(page=2, page_size=10)
+```cpp
+// List all resources of this type
+auto items = client.fabric().agents.list();
+items = client.fabric().agents.list({{"page", "2"}, {"page_size", "10"}});
 
-# Create a new resource
-agent = client.fabric.ai_agents.create(
-    name="Support Bot",
-    prompt={"text": "You are a helpful support agent."},
-)
+// Create a new resource
+auto agent = client.fabric().agents.create({
+    {"name", "Support Bot"},
+    {"prompt", {{"text", "You are a helpful support agent."}}},
+});
 
-# Get a resource by ID
-agent = client.fabric.ai_agents.get("agent-uuid")
+// Get a resource by ID
+auto got = client.fabric().agents.get("agent-uuid");
 
-# Update a resource
-client.fabric.ai_agents.update("agent-uuid", name="Updated Name")
+// Update a resource
+client.fabric().agents.update("agent-uuid", {{"name", "Updated Name"}});
 
-# Delete a resource
-client.fabric.ai_agents.delete("agent-uuid")
-
-# List addresses assigned to this resource
-addresses = client.fabric.ai_agents.list_addresses("agent-uuid")
+// Delete a resource
+client.fabric().agents.del("agent-uuid");
 ```
+
+Every `client.fabric().<name>` member is a `CrudResource` with `list / create / get / update / del`. The per-resource notes below cover only the exceptions.
 
 ## Resource Types
 
-### PUT-Update Resources
+| Accessor                           | API Path                                    | Notes |
+|------------------------------------|---------------------------------------------|-------|
+| `fabric().subscribers`             | `/api/fabric/subscribers`                   | |
+| `fabric().addresses`               | `/api/fabric/addresses`                     | |
+| `fabric().sip_endpoints`           | `/api/fabric/sip_endpoints`                 | |
+| `fabric().call_flows`              | `/api/fabric/call_flows`                    | |
+| `fabric().swml_scripts`            | `/api/fabric/swml_scripts`                  | |
+| `fabric().conferences`             | `/api/fabric/conferences`                   | |
+| `fabric().resources`               | `/api/fabric/resources`                     | Generic-resource CRUD. |
+| `fabric().tokens`                  | `/api/fabric/tokens`                        | |
+| `fabric().routing`                 | `/api/fabric/routing`                       | |
+| `fabric().agents`                  | `/api/fabric/agents`                        | AI Agent resources. |
+| `fabric().domains`                 | `/api/fabric/domains`                       | |
+| `fabric().topics`                  | `/api/fabric/topics`                        | |
+| `fabric().webhooks`                | `/api/fabric/webhooks`                      | |
 
-These resources use `PUT` for updates (full replacement):
+### Auto-materialized resource types (not exposed as a create surface)
 
-| Attribute | API Path |
-|-----------|----------|
-| `fabric.swml_scripts` | `/api/fabric/resources/swml_scripts` |
-| `fabric.relay_applications` | `/api/fabric/resources/relay_applications` |
-| `fabric.call_flows` | `/api/fabric/resources/call_flows` |
-| `fabric.conference_rooms` | `/api/fabric/resources/conference_rooms` |
-| `fabric.freeswitch_connectors` | `/api/fabric/resources/freeswitch_connectors` |
-| `fabric.subscribers` | `/api/fabric/resources/subscribers` |
-| `fabric.sip_endpoints` | `/api/fabric/resources/sip_endpoints` |
-| `fabric.cxml_scripts` | `/api/fabric/resources/cxml_scripts` |
-| `fabric.cxml_applications` | `/api/fabric/resources/cxml_applications` |
+Two resource types — `swml_webhook` and `cxml_webhook` — are **auto-materialized** by the server as a side-effect of binding a phone number to a call handler. They are deliberately **not exposed as a creation surface** on this SDK's Fabric namespace; creating them directly produces orphan resources that don't bind to any phone number.
 
-### PATCH-Update Resources
+To produce an `swml_webhook` or `cxml_webhook` resource, bind a phone number to the matching handler:
 
-These resources use `PATCH` for updates (partial update):
+```cpp
+// Auto-creates an swml_webhook Fabric resource
+client.phone_numbers().set_swml_webhook(pn_id, "https://example.com/swml");
 
-| Attribute | API Path |
-|-----------|----------|
-| `fabric.swml_webhooks` | `/api/fabric/resources/swml_webhooks` |
-| `fabric.ai_agents` | `/api/fabric/resources/ai_agents` |
-| `fabric.sip_gateways` | `/api/fabric/resources/sip_gateways` |
-| `fabric.cxml_webhooks` | `/api/fabric/resources/cxml_webhooks` |
-
-## Call Flows -- Extra Methods
-
-Call flows support version management:
-
-```python
-# List all versions of a call flow
-versions = client.fabric.call_flows.list_versions("call-flow-uuid")
-
-# Deploy a new version
-client.fabric.call_flows.deploy_version("call-flow-uuid", document_version=3)
+// Auto-creates a cxml_webhook Fabric resource
+client.phone_numbers().set_cxml_webhook(pn_id, "https://example.com/voice.xml");
 ```
 
-## Subscribers -- SIP Endpoints
+Full model and all 11 call-handler variants: see **[phone-binding.md](phone-binding.md)**.
 
-Subscribers have nested SIP endpoint management:
+## Binding a phone number to a handler
 
-```python
-# List subscriber's SIP endpoints
-endpoints = client.fabric.subscribers.list_sip_endpoints("subscriber-uuid")
+See **[phone-binding.md](phone-binding.md)** for the `PhoneCallHandler` enum, the mapping from each handler value to its auto-materialized Fabric resource, and the typed `phone_numbers().set_*` helpers. The one-liner summary:
 
-# Create a SIP endpoint for a subscriber
-endpoint = client.fabric.subscribers.create_sip_endpoint(
-    "subscriber-uuid",
-    username="user1",
-    password="secret",
-    caller_id="+15551234567",
-)
-
-# Get a specific SIP endpoint
-endpoint = client.fabric.subscribers.get_sip_endpoint("subscriber-uuid", "endpoint-uuid")
-
-# Update a SIP endpoint (uses PATCH)
-client.fabric.subscribers.update_sip_endpoint(
-    "subscriber-uuid", "endpoint-uuid",
-    caller_id="+15559876543",
-)
-
-# Delete a SIP endpoint
-client.fabric.subscribers.delete_sip_endpoint("subscriber-uuid", "endpoint-uuid")
+```cpp
+// SWML webhook (your backend returns SWML per call)
+client.phone_numbers().set_swml_webhook(pn_id, "https://example.com/swml");
 ```
 
-## cXML Applications
+### `assign_phone_route` is not shipped
 
-cXML applications support list/get/update/delete but not create:
+Some SDKs expose a `client.fabric().resources.assign_phone_route(...)` call that posts to `/api/fabric/resources/{id}/phone_routes`. That method does **not** bind a phone number to an SWML/cXML webhook or AI agent — those bindings live on the phone number (see [phone-binding.md](phone-binding.md)) and the Fabric resource is materialized automatically. `assign_phone_route` applies only to a narrow set of legacy resource types.
 
-```python
-apps = client.fabric.cxml_applications.list()
-app = client.fabric.cxml_applications.get("app-uuid")
-client.fabric.cxml_applications.update("app-uuid", voice_url="https://example.com/voice")
-client.fabric.cxml_applications.delete("app-uuid")
-
-# This raises NotImplementedError:
-# client.fabric.cxml_applications.create(...)
-```
+This SDK deliberately omits `assign_phone_route`. If you need it for a legacy resource type, drop to HTTP via `client.http_client().post(...)`.
 
 ## Generic Resources
 
 Operate on any resource type by ID:
 
-```python
-# List all resources across all types
-all_resources = client.fabric.resources.list()
+```cpp
+// List all resources across all types
+auto all_resources = client.fabric().resources.list();
 
-# Get any resource by ID
-resource = client.fabric.resources.get("resource-uuid")
+// Get any resource by ID
+auto resource = client.fabric().resources.get("resource-uuid");
 
-# Delete any resource
-client.fabric.resources.delete("resource-uuid")
-
-# List addresses for any resource
-addresses = client.fabric.resources.list_addresses("resource-uuid")
-
-# Assign a resource to a phone route
-client.fabric.resources.assign_phone_route("resource-uuid", phone_route_id="route-uuid")
-
-# Assign a resource as a domain application handler
-client.fabric.resources.assign_domain_application("resource-uuid", domain_application_id="da-uuid")
-```
-
-## Fabric Addresses
-
-Read-only access to all fabric addresses:
-
-```python
-# List all addresses (filter by type or display_name)
-addresses = client.fabric.addresses.list(type="room")
-
-# Get a specific address
-address = client.fabric.addresses.get("address-uuid")
-```
-
-## Tokens
-
-Create tokens for subscribers, guests, invites, and embeds:
-
-```python
-# Subscriber token
-token = client.fabric.tokens.create_subscriber_token(
-    reference="user@example.com",
-    password="secret",
-)
-
-# Refresh a subscriber token
-refreshed = client.fabric.tokens.refresh_subscriber_token(
-    refresh_token="existing-refresh-token",
-)
-
-# Guest token
-token = client.fabric.tokens.create_guest_token(
-    allowed_addresses=["address-uuid-1", "address-uuid-2"],
-    expire_at="2025-12-31T23:59:59Z",
-)
-
-# Subscriber invite token
-token = client.fabric.tokens.create_invite_token(
-    address_id="address-uuid",
-    expires_at="2025-12-31T23:59:59Z",
-)
-
-# Click-to-call embed token
-token = client.fabric.tokens.create_embed_token(token="embed-source-token")
+// Delete any resource
+client.fabric().resources.del("resource-uuid");
 ```
