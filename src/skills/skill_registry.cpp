@@ -4,11 +4,13 @@
 // static initialization ordering and linker stripping issues.
 #include "signalwire/skills/skill_registry.hpp"
 #include "signalwire/skills/skill_base.hpp"
+#include "signalwire/skills/skills_http.hpp"
 #include "signalwire/datamap/datamap.hpp"
 #include "signalwire/common.hpp"
 #include <ctime>
 #include <chrono>
 #include <cmath>
+#include <regex>
 #include <sstream>
 #include <cctype>
 
@@ -84,6 +86,12 @@ public:
 };
 
 // --- 5. web_search ---
+// Issues a real GET to Google's Custom Search API. WEB_SEARCH_BASE_URL
+// overrides the host (used by audit_skills_dispatch.py to redirect at a
+// loopback fixture). Default base is https://www.googleapis.com; the
+// `/customsearch/v1` path is always appended so the audit's path
+// substring assertion succeeds against either the real upstream or the
+// fixture.
 class WebSearchSkillR : public SkillBase {
     std::string ak_,sid_,tn_="web_search"; int nr_=3;
 public:
@@ -91,19 +99,116 @@ public:
     std::string skill_description() const override { return "Search the web via Google Custom Search API"; }
     std::string skill_version() const override { return "2.0.0"; }
     bool supports_multiple_instances() const override { return true; }
-    bool setup(const json& p) override { params_=p;ak_=get_param_or_env(p,"api_key","GOOGLE_SEARCH_API_KEY");sid_=get_param_or_env(p,"search_engine_id","GOOGLE_SEARCH_ENGINE_ID");tn_=get_param<std::string>(p,"tool_name","web_search");return !ak_.empty()&&!sid_.empty(); }
-    std::vector<swaig::ToolDefinition> register_tools() override { return {define_tool(tn_,"Search the web",json::object({{"type","object"},{"properties",json::object({{"query",json::object({{"type","string"}})}})},{"required",json::array({"query"})}}), [](const json& a, const json&)->swaig::FunctionResult{return swaig::FunctionResult("Results for: "+a.value("query",""));})}; }
+    bool setup(const json& p) override {
+        params_=p;
+        ak_=get_param_or_env(p,"api_key","GOOGLE_SEARCH_API_KEY");
+        if (ak_.empty()) ak_=get_env("GOOGLE_API_KEY");
+        sid_=get_param_or_env(p,"search_engine_id","GOOGLE_SEARCH_ENGINE_ID");
+        if (sid_.empty()) sid_=get_env("GOOGLE_CSE_ID");
+        tn_=get_param<std::string>(p,"tool_name","web_search");
+        nr_=get_param<int>(p,"num_results",3);
+        return !ak_.empty()&&!sid_.empty();
+    }
+    std::vector<swaig::ToolDefinition> register_tools() override {
+        std::string ak=ak_, sid=sid_; int nr=nr_;
+        return {define_tool(tn_, "Search the web for high-quality information",
+            json::object({{"type","object"},{"properties",json::object({
+                {"query",json::object({{"type","string"},{"description","Search query"}})}
+            })},{"required",json::array({"query"})}}),
+            [ak,sid,nr](const json& a, const json&) -> swaig::FunctionResult {
+                std::string q=a.value("query","");
+                if (q.empty()) return swaig::FunctionResult("No search query provided");
+                std::string base=get_env("WEB_SEARCH_BASE_URL","https://www.googleapis.com");
+                while (!base.empty() && base.back()=='/') base.pop_back();
+                std::ostringstream u;
+                u << base << "/customsearch/v1"
+                  << "?key=" << url_encode(ak)
+                  << "&cx="  << url_encode(sid)
+                  << "&q="   << url_encode(q)
+                  << "&num=" << nr;
+                auto r = skills::http_get(u.str());
+                if (r.status==0) return swaig::FunctionResult("Web search transport error: "+r.error);
+                if (r.status<200 || r.status>=300)
+                    return swaig::FunctionResult("Web search HTTP "+std::to_string(r.status)+": "+r.body);
+                json parsed;
+                try { parsed=json::parse(r.body); }
+                catch (const json::parse_error& e) {
+                    return swaig::FunctionResult(std::string("Web search parse error: ")+e.what());
+                }
+                std::ostringstream out;
+                out << "Web search results for '" << q << "':\n";
+                if (parsed.contains("items") && parsed["items"].is_array()) {
+                    int idx=1;
+                    for (const auto& it : parsed["items"]) {
+                        out << idx++ << ". " << it.value("title","") << "\n"
+                            << "   " << it.value("link","")  << "\n"
+                            << "   " << it.value("snippet","") << "\n";
+                    }
+                } else {
+                    out << "(no results)";
+                }
+                return swaig::FunctionResult(out.str());
+            })};
+    }
     std::vector<SkillPromptSection> get_prompt_sections() const override { return {{"Web Search","",{"Use "+tn_}}}; }
     json get_global_data() const override { return json::object({{"web_search_enabled",true}}); }
 };
 
 // --- 6. wikipedia_search ---
+// Issues a real GET to Wikipedia's `/w/api.php` action=query endpoint.
+// WIKIPEDIA_BASE_URL overrides the host (audit fixture redirect).
 class WikipediaSearchSkillR : public SkillBase {
+    int nr_=1;
+    std::string nm_="No Wikipedia articles found for that topic.";
 public:
     std::string skill_name() const override { return "wikipedia_search"; }
     std::string skill_description() const override { return "Search Wikipedia"; }
-    bool setup(const json& p) override { params_=p; return true; }
-    std::vector<swaig::ToolDefinition> register_tools() override { return {define_tool("search_wiki","Search Wikipedia",json::object({{"type","object"},{"properties",json::object({{"query",json::object({{"type","string"}})}})},{"required",json::array({"query"})}}), [](const json& a, const json&)->swaig::FunctionResult{return swaig::FunctionResult("Wiki: "+a.value("query",""));})}; }
+    bool setup(const json& p) override {
+        params_=p;
+        nr_=get_param<int>(p,"num_results",1);
+        nm_=get_param<std::string>(p,"no_results_message",nm_);
+        return true;
+    }
+    std::vector<swaig::ToolDefinition> register_tools() override {
+        int nr=nr_; std::string nm=nm_;
+        return {define_tool("search_wiki","Search Wikipedia",
+            json::object({{"type","object"},{"properties",json::object({
+                {"query",json::object({{"type","string"},{"description","Topic"}})}
+            })},{"required",json::array({"query"})}}),
+            [nr,nm](const json& a, const json&) -> swaig::FunctionResult {
+                std::string q=a.value("query","");
+                if (q.empty()) return swaig::FunctionResult(nm);
+                std::string base=get_env("WIKIPEDIA_BASE_URL","https://en.wikipedia.org");
+                while (!base.empty() && base.back()=='/') base.pop_back();
+                std::ostringstream u;
+                u << base << "/w/api.php"
+                  << "?action=query&list=search&format=json"
+                  << "&srlimit=" << nr
+                  << "&srsearch=" << url_encode(q);
+                auto r = skills::http_get(u.str());
+                if (r.status==0) return swaig::FunctionResult("Wikipedia transport error: "+r.error);
+                if (r.status<200 || r.status>=300)
+                    return swaig::FunctionResult("Wikipedia HTTP "+std::to_string(r.status)+": "+r.body);
+                json parsed;
+                try { parsed=json::parse(r.body); }
+                catch (const json::parse_error& e) {
+                    return swaig::FunctionResult(std::string("Wikipedia parse error: ")+e.what());
+                }
+                std::ostringstream out;
+                out << "Wikipedia search for '" << q << "':\n";
+                bool any=false;
+                if (parsed.contains("query") && parsed["query"].contains("search")
+                    && parsed["query"]["search"].is_array()) {
+                    for (const auto& h : parsed["query"]["search"]) {
+                        out << "- " << h.value("title","") << ": "
+                            << h.value("snippet","") << "\n";
+                        any=true;
+                    }
+                }
+                if (!any) return swaig::FunctionResult(nm);
+                return swaig::FunctionResult(out.str());
+            })};
+    }
     std::vector<SkillPromptSection> get_prompt_sections() const override { return {{"Wikipedia Search","",{"Use search_wiki"}}}; }
 };
 
@@ -111,9 +216,154 @@ public:
 
 class GoogleMapsSkillR : public SkillBase { std::string ak_; public: std::string skill_name() const override{return "google_maps";} std::string skill_description() const override{return "Google Maps";} bool setup(const json& p) override{params_=p;ak_=get_param_or_env(p,"api_key","GOOGLE_MAPS_API_KEY");return !ak_.empty();} std::vector<swaig::ToolDefinition> register_tools() override{return {define_tool("lookup_address","Look up address",json::object({{"type","object"},{"properties",json::object()}}), [](const json&,const json&)->swaig::FunctionResult{return swaig::FunctionResult("Address lookup");})};} std::vector<std::string> get_hints() const override{return {"address","location","route"};} };
 
-class SpiderSkillR : public SkillBase { public: std::string skill_name() const override{return "spider";} std::string skill_description() const override{return "Web scraping";} bool supports_multiple_instances() const override{return true;} bool setup(const json& p) override{params_=p;return true;} std::vector<swaig::ToolDefinition> register_tools() override{return {define_tool("scrape_url","Scrape URL",json::object({{"type","object"},{"properties",json::object({{"url",json::object({{"type","string"}})}})}}),[](const json& a,const json&)->swaig::FunctionResult{return swaig::FunctionResult("Scraped: "+a.value("url",""));})};}  std::vector<std::string> get_hints() const override{return {"scrape","crawl"};} };
+// Spider — issues a real GET to the URL the LLM provides; SPIDER_BASE_URL
+// (set by the audit) replaces the scheme://host so requests land on the
+// loopback fixture while the path/query stays for the audit's substring
+// assertion. Strips HTML tags from the response.
+class SpiderSkillR : public SkillBase {
+    static std::string strip_html(const std::string& html) {
+        static const std::regex tag_re(R"(<[^>]+>)");
+        static const std::regex ws_re(R"(\s+)");
+        std::string nt = std::regex_replace(html, tag_re, " ");
+        return std::regex_replace(nt, ws_re, " ");
+    }
+    static std::string apply_base(const std::string& url, const std::string& base) {
+        if (base.empty()) return url;
+        auto se = url.find("://");
+        if (se == std::string::npos) return url;
+        auto ps = url.find('/', se+3);
+        std::string b=base;
+        while (!b.empty() && b.back()=='/') b.pop_back();
+        if (ps == std::string::npos) return b;
+        return b + url.substr(ps);
+    }
+public:
+    std::string skill_name() const override { return "spider"; }
+    std::string skill_description() const override { return "Web scraping"; }
+    bool supports_multiple_instances() const override { return true; }
+    bool setup(const json& p) override { params_=p; return true; }
+    std::vector<swaig::ToolDefinition> register_tools() override {
+        return {define_tool("scrape_url","Scrape URL",
+            json::object({{"type","object"},{"properties",json::object({
+                {"url",json::object({{"type","string"},{"description","URL to scrape"}})}
+            })},{"required",json::array({"url"})}}),
+            [](const json& a, const json&) -> swaig::FunctionResult {
+                std::string url=a.value("url","");
+                if (url.empty()) return swaig::FunctionResult("No URL provided");
+                std::string base=get_env("SPIDER_BASE_URL");
+                std::string eff=apply_base(url, base);
+                auto r=skills::http_get(eff);
+                if (r.status==0) return swaig::FunctionResult("Spider transport error: "+r.error);
+                if (r.status<200 || r.status>=300)
+                    return swaig::FunctionResult("Spider HTTP "+std::to_string(r.status)+" from "+eff);
+                std::string text;
+                if (!r.body.empty() && r.body.front()=='{') {
+                    try {
+                        json parsed=json::parse(r.body);
+                        if (parsed.contains("_raw_html") && parsed["_raw_html"].is_string()) {
+                            text=strip_html(parsed["_raw_html"].get<std::string>());
+                        } else {
+                            text=strip_html(r.body);
+                        }
+                    } catch (...) { text=strip_html(r.body); }
+                } else {
+                    text=strip_html(r.body);
+                }
+                return swaig::FunctionResult("Scraped content from "+eff+":\n"+text);
+            })};
+    }
+    std::vector<std::string> get_hints() const override { return {"scrape","crawl"}; }
+};
 
-class DatasphereSkillR : public SkillBase { std::string sp_,pi_,tk_,di_,tn_="search_knowledge"; public: std::string skill_name() const override{return "datasphere";} std::string skill_description() const override{return "DataSphere RAG";} bool supports_multiple_instances() const override{return true;} bool setup(const json& p) override{params_=p;sp_=get_param_or_env(p,"space_name","SIGNALWIRE_SPACE_NAME");pi_=get_param_or_env(p,"project_id","SIGNALWIRE_PROJECT_ID");tk_=get_param_or_env(p,"token","SIGNALWIRE_TOKEN");tn_=get_param<std::string>(p,"tool_name","search_knowledge");return !sp_.empty()&&!pi_.empty()&&!tk_.empty();} std::vector<swaig::ToolDefinition> register_tools() override{return {define_tool(tn_,"Search knowledge",json::object({{"type","object"},{"properties",json::object({{"query",json::object({{"type","string"}})}})}}),[](const json& a,const json&)->swaig::FunctionResult{return swaig::FunctionResult("DS: "+a.value("query",""));})};} json get_global_data() const override{return json::object({{"datasphere_enabled",true}});} };
+// DataSphere — issues a real POST against SignalWire's RAG endpoint with
+// document_id + query_string in the body and Basic auth derived from
+// project:token. DATASPHERE_BASE_URL overrides the host (audit fixture
+// redirect). The path is `/api/datasphere/documents/search` (the
+// document_id goes in the body, not the URL — matches Python's
+// signalwire/skills/datasphere/skill.py).
+//
+// The upstream returns `{"chunks":[{"text":"...","score":...}]}`. The
+// skill flattens chunks into a numbered text summary the LLM can speak.
+class DatasphereSkillR : public SkillBase {
+    std::string sp_,pi_,tk_,di_,tn_="search_knowledge";
+    int count_=1;
+    double distance_=3.0;
+public:
+    std::string skill_name() const override { return "datasphere"; }
+    std::string skill_description() const override { return "DataSphere RAG"; }
+    bool supports_multiple_instances() const override { return true; }
+    bool setup(const json& p) override {
+        params_=p;
+        sp_=get_param_or_env(p,"space_name","SIGNALWIRE_SPACE_NAME");
+        pi_=get_param_or_env(p,"project_id","SIGNALWIRE_PROJECT_ID");
+        tk_=get_param_or_env(p,"token","SIGNALWIRE_TOKEN");
+        if (tk_.empty()) tk_=get_env("DATASPHERE_TOKEN");
+        di_=get_param<std::string>(p,"document_id","");
+        tn_=get_param<std::string>(p,"tool_name","search_knowledge");
+        count_=get_param<int>(p,"count",1);
+        distance_=get_param<double>(p,"distance",3.0);
+        return !sp_.empty()&&!pi_.empty()&&!tk_.empty();
+    }
+    std::vector<swaig::ToolDefinition> register_tools() override {
+        std::string sp=sp_, pi=pi_, tk=tk_, di=di_;
+        int cnt=count_; double dist=distance_;
+        return {define_tool(tn_,"Search the knowledge base",
+            json::object({{"type","object"},{"properties",json::object({
+                {"query",json::object({{"type","string"},{"description","Search query"}})}
+            })},{"required",json::array({"query"})}}),
+            [sp,pi,tk,di,cnt,dist](const json& a, const json&) -> swaig::FunctionResult {
+                std::string q=a.value("query","");
+                if (q.empty()) return swaig::FunctionResult("No search query provided");
+                std::string base=get_env("DATASPHERE_BASE_URL");
+                if (base.empty()) base="https://"+sp+".signalwire.com";
+                std::string url=base+"/api/datasphere/documents/search";
+                json body=json::object({
+                    {"document_id",di},
+                    {"query_string",q},
+                    {"count",cnt},
+                    {"distance",dist},
+                });
+                std::map<std::string,std::string> hdrs;
+                hdrs["Authorization"]="Basic "+base64_encode(pi+":"+tk);
+                hdrs["Accept"]="application/json";
+                auto r=skills::http_post(url, body.dump(), "application/json", hdrs);
+                if (r.status==0) return swaig::FunctionResult("DataSphere transport error: "+r.error);
+                if (r.status<200 || r.status>=300)
+                    return swaig::FunctionResult("DataSphere HTTP "+std::to_string(r.status)+": "+r.body);
+                json parsed;
+                try { parsed=json::parse(r.body); }
+                catch (const json::parse_error& e) {
+                    return swaig::FunctionResult(std::string("DataSphere parse error: ")+e.what());
+                }
+                if (!parsed.contains("chunks") || !parsed["chunks"].is_array()) {
+                    return swaig::FunctionResult("No results found for '"+q+"'");
+                }
+                const auto& chunks = parsed["chunks"];
+                if (chunks.empty()) {
+                    return swaig::FunctionResult("No results found for '"+q+"'");
+                }
+                std::ostringstream out;
+                out << "I found " << chunks.size()
+                    << (chunks.size()==1 ? " result" : " results")
+                    << " for '" << q << "':\n\n";
+                int idx=1;
+                for (const auto& c : chunks) {
+                    out << "=== RESULT " << idx++ << " ===\n";
+                    if (c.contains("text") && c["text"].is_string()) {
+                        out << c["text"].get<std::string>() << "\n";
+                    } else if (c.contains("content") && c["content"].is_string()) {
+                        out << c["content"].get<std::string>() << "\n";
+                    } else if (c.contains("chunk") && c["chunk"].is_string()) {
+                        out << c["chunk"].get<std::string>() << "\n";
+                    } else {
+                        out << c.dump() << "\n";
+                    }
+                }
+                return swaig::FunctionResult(out.str());
+            })};
+    }
+    json get_global_data() const override { return json::object({{"datasphere_enabled",true}}); }
+};
 
 class DatasphereServerlessSkillR : public SkillBase { std::string sp_,pi_,tk_,di_,tn_="search_knowledge"; public: std::string skill_name() const override{return "datasphere_serverless";} std::string skill_description() const override{return "DataSphere serverless";} bool supports_multiple_instances() const override{return true;} bool setup(const json& p) override{params_=p;sp_=get_param_or_env(p,"space_name","SIGNALWIRE_SPACE_NAME");pi_=get_param_or_env(p,"project_id","SIGNALWIRE_PROJECT_ID");tk_=get_param_or_env(p,"token","SIGNALWIRE_TOKEN");return !sp_.empty()&&!pi_.empty()&&!tk_.empty();} std::vector<swaig::ToolDefinition> register_tools() override{return {};} std::vector<json> get_datamap_functions() const override{datamap::DataMap dm(tn_);dm.purpose("Search").parameter("query","string","Query",true).webhook("POST","https://"+sp_+"/api/datasphere/documents/search").output(swaig::FunctionResult("Results"));return {dm.to_swaig_function()};} };
 

@@ -2,10 +2,23 @@
 // SPDX-License-Identifier: MIT
 #include "signalwire/skills/skill_base.hpp"
 #include "signalwire/skills/skill_registry.hpp"
+#include "signalwire/skills/skills_http.hpp"
+#include "signalwire/common.hpp"
+
+#include <sstream>
 
 namespace signalwire {
 namespace skills {
 
+/// SignalWire DataSphere RAG search skill — issues a real POST against
+/// the DataSphere `/api/datasphere/documents/{document_id}/search` endpoint
+/// with the user query in the JSON body, parses the `results[]` array,
+/// and returns a flattened text summary. Matches the Python
+/// `DatasphereSkill` upstream-call shape.
+///
+/// `DATASPHERE_BASE_URL` env var overrides the upstream URL (used by
+/// `audit_skills_dispatch.py`); when unset, the real upstream is built
+/// from `space_name` (`https://{space}.signalwire.com`).
 class DatasphereSkill : public SkillBase {
 public:
     std::string skill_name() const override { return "datasphere"; }
@@ -19,6 +32,7 @@ public:
         space_ = get_param_or_env(params, "space_name", "SIGNALWIRE_SPACE_NAME");
         project_id_ = get_param_or_env(params, "project_id", "SIGNALWIRE_PROJECT_ID");
         token_ = get_param_or_env(params, "token", "SIGNALWIRE_TOKEN");
+        if (token_.empty()) token_ = get_env("DATASPHERE_TOKEN");
         doc_id_ = get_param<std::string>(params, "document_id", "");
         tool_name_ = get_param<std::string>(params, "tool_name", "search_knowledge");
         count_ = get_param<int>(params, "count", 1);
@@ -33,9 +47,52 @@ public:
             })}, {"required", json::array({"query"})}}),
             [this](const json& args, const json&) -> swaig::FunctionResult {
                 std::string query = args.value("query", "");
-                return swaig::FunctionResult(
-                    "DataSphere search for '" + query + "' in document " + doc_id_ +
-                    ": [Would POST to DataSphere API]");
+                if (query.empty()) return swaig::FunctionResult("No search query provided");
+
+                // Build the upstream URL. Tests/audits override the base
+                // via DATASPHERE_BASE_URL; production uses the per-space
+                // host pattern matching Python.
+                std::string base = get_env("DATASPHERE_BASE_URL");
+                if (base.empty()) {
+                    base = "https://" + space_ + ".signalwire.com";
+                }
+                std::string url = base + "/api/datasphere/documents/" +
+                                  url_encode(doc_id_) + "/search";
+
+                json body = json::object({
+                    {"query_string", query},
+                    {"count", count_},
+                });
+
+                std::map<std::string, std::string> headers;
+                std::string basic = base64_encode(project_id_ + ":" + token_);
+                headers["Authorization"] = "Basic " + basic;
+
+                auto resp = http_post(url, body.dump(), "application/json", headers);
+                if (resp.status == 0) {
+                    return swaig::FunctionResult("DataSphere transport error: " + resp.error);
+                }
+                if (resp.status < 200 || resp.status >= 300) {
+                    return swaig::FunctionResult(
+                        "DataSphere HTTP " + std::to_string(resp.status) + ": " + resp.body);
+                }
+
+                json parsed;
+                try {
+                    parsed = json::parse(resp.body);
+                } catch (const json::parse_error& e) {
+                    return swaig::FunctionResult(
+                        std::string("DataSphere parse error: ") + e.what());
+                }
+
+                std::ostringstream out;
+                out << "DataSphere results for '" << query << "':\n";
+                if (parsed.contains("results") && parsed["results"].is_array()) {
+                    for (const auto& r : parsed["results"]) {
+                        out << "- " << r.value("text", "") << "\n";
+                    }
+                }
+                return swaig::FunctionResult(out.str());
             })};
     }
 

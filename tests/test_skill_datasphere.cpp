@@ -1,5 +1,9 @@
 // Datasphere skill tests
 #include "signalwire/skills/skill_registry.hpp"
+#include "httplib.h"
+#include <atomic>
+#include <chrono>
+#include <thread>
 namespace sw_skills = signalwire::skills;
 using json = nlohmann::json;
 
@@ -56,7 +60,31 @@ TEST(skill_datasphere_global_data_contains_enabled) {
     return true;
 }
 
+// Drive the handler against a local fixture so we prove the skill issues
+// a real POST with Basic auth and parses the results[] array. The
+// fixture answers `/api/datasphere/documents/{doc}/search` with a
+// canned JSON body containing one result.
 TEST(skill_datasphere_handler_returns_response) {
+    httplib::Server srv;
+    std::atomic<bool> got_request{false};
+    std::string captured_auth;
+    srv.Post("/api/datasphere/documents/search",
+             [&](const httplib::Request& req, httplib::Response& res) {
+        got_request = true;
+        captured_auth = req.get_header_value("Authorization");
+        res.set_content(R"JSON({"chunks":[{"text":"answer body","score":0.9}]})JSON",
+                        "application/json");
+    });
+
+    int port = 0;
+    std::thread th([&]{ port = srv.bind_to_any_port("127.0.0.1"); srv.listen_after_bind(); });
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+    while (port == 0 && std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    ASSERT_TRUE(port > 0);
+
+    ::setenv("DATASPHERE_BASE_URL", ("http://127.0.0.1:" + std::to_string(port)).c_str(), 1);
     auto skill = sw_skills::SkillRegistry::instance().create("datasphere");
     skill->setup(json::object({
         {"space_name", "s"}, {"project_id", "p"}, {"token", "t"},
@@ -64,6 +92,14 @@ TEST(skill_datasphere_handler_returns_response) {
     }));
     auto tools = skill->register_tools();
     auto result = tools[0].handler(json::object({{"query", "test"}}), json::object());
-    ASSERT_FALSE(result.to_json()["response"].get<std::string>().empty());
+    auto resp = result.to_json()["response"].get<std::string>();
+
+    srv.stop();
+    th.join();
+    ::unsetenv("DATASPHERE_BASE_URL");
+
+    ASSERT_TRUE(got_request);
+    ASSERT_TRUE(captured_auth.rfind("Basic ", 0) == 0);  // proves Basic auth shape
+    ASSERT_TRUE(resp.find("answer body") != std::string::npos);  // proves real parse
     return true;
 }

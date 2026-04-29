@@ -1,0 +1,40 @@
+// Copyright (c) 2025 SignalWire
+// SPDX-License-Identifier: MIT
+#pragma once
+
+#include <string>
+#include <map>
+
+namespace signalwire {
+namespace skills {
+
+/// Result of a skill HTTP request. `status` is the HTTP status code (0
+/// indicates a transport-level error — connection refused, DNS, etc.).
+/// `body` is the raw response body. `error` is non-empty when `status` is 0.
+struct SkillHttpResponse {
+    int status = 0;
+    std::string body;
+    std::string error;
+};
+
+/// Issue a real HTTP GET. Implementation uses cpp-httplib so it works
+/// against any plain-HTTP host (including loopback fixtures used by the
+/// `audit_skills_dispatch.py` audit). Skills that need TLS to reach
+/// production upstreams set the appropriate base-URL env var (e.g.
+/// `WEB_SEARCH_BASE_URL`) — production deployments point at TLS proxies
+/// or a dev-side rewriter; the SDK keeps its transport stack OpenSSL-3
+/// independent until the wider port adopts it.
+SkillHttpResponse http_get(const std::string& url,
+                           const std::map<std::string, std::string>& headers = {},
+                           int timeout_seconds = 10);
+
+/// Issue a real HTTP POST with `body` as the request body and `content_type`
+/// for Content-Type. Same semantics as `http_get` for status / error / body.
+SkillHttpResponse http_post(const std::string& url,
+                            const std::string& body,
+                            const std::string& content_type = "application/json",
+                            const std::map<std::string, std::string>& headers = {},
+                            int timeout_seconds = 10);
+
+}  // namespace skills
+}  // namespace signalwire

@@ -2,10 +2,25 @@
 // SPDX-License-Identifier: MIT
 #include "signalwire/skills/skill_base.hpp"
 #include "signalwire/skills/skill_registry.hpp"
+#include "signalwire/skills/skills_http.hpp"
+#include "signalwire/common.hpp"
+
+#include <sstream>
 
 namespace signalwire {
 namespace skills {
 
+/// Google Custom Search API skill — issues a real GET against Google's
+/// `customsearch/v1` endpoint, parses the `items[]` results, and returns
+/// a human-readable summary. Matches Python's `WebSearchSkill` behavior.
+///
+/// Configuration:
+///   - api_key (or env GOOGLE_SEARCH_API_KEY / GOOGLE_API_KEY)
+///   - search_engine_id (or env GOOGLE_SEARCH_ENGINE_ID / GOOGLE_CSE_ID)
+///   - num_results (default 3)
+///   - tool_name (default "web_search")
+///   - WEB_SEARCH_BASE_URL env var overrides the upstream URL (used by
+///     `audit_skills_dispatch.py` to point the skill at a fixture)
 class WebSearchSkill : public SkillBase {
 public:
     std::string skill_name() const override { return "web_search"; }
@@ -16,7 +31,9 @@ public:
     bool setup(const json& params) override {
         params_ = params;
         api_key_ = get_param_or_env(params, "api_key", "GOOGLE_SEARCH_API_KEY");
+        if (api_key_.empty()) api_key_ = get_env("GOOGLE_API_KEY");
         search_engine_id_ = get_param_or_env(params, "search_engine_id", "GOOGLE_SEARCH_ENGINE_ID");
+        if (search_engine_id_.empty()) search_engine_id_ = get_env("GOOGLE_CSE_ID");
         tool_name_ = get_param<std::string>(params, "tool_name", "web_search");
         num_results_ = get_param<int>(params, "num_results", 3);
         return !api_key_.empty() && !search_engine_id_.empty();
@@ -36,10 +53,56 @@ public:
             [this](const json& args, const json&) -> swaig::FunctionResult {
                 std::string query = args.value("query", "");
                 if (query.empty()) return swaig::FunctionResult("No search query provided");
-                // In a real implementation, this would call the Google Custom Search API
-                return swaig::FunctionResult(
-                    "Web search results for '" + query +
-                    "': [Results would be fetched from Google Custom Search API with key]");
+
+                // Base URL (default Google) plus the API path. When
+                // WEB_SEARCH_BASE_URL points at a fixture, we still emit
+                // `/customsearch/v1` so the audit's path-substring check
+                // sees the documented endpoint. Strip a trailing slash on
+                // the base so we don't end up with `//`.
+                std::string base = get_env("WEB_SEARCH_BASE_URL",
+                                           "https://www.googleapis.com");
+                while (!base.empty() && base.back() == '/') base.pop_back();
+                std::ostringstream url;
+                url << base << "/customsearch/v1"
+                    << "?key=" << url_encode(api_key_)
+                    << "&cx=" << url_encode(search_engine_id_)
+                    << "&q=" << url_encode(query)
+                    << "&num=" << num_results_;
+
+                auto resp = http_get(url.str());
+                if (resp.status == 0) {
+                    return swaig::FunctionResult(
+                        "Web search transport error: " + resp.error);
+                }
+                if (resp.status < 200 || resp.status >= 300) {
+                    return swaig::FunctionResult(
+                        "Web search HTTP " + std::to_string(resp.status) + ": " + resp.body);
+                }
+
+                // Parse Google CSE response shape:
+                //   { "items": [ {"title", "link", "snippet"}, ... ] }
+                json parsed;
+                try {
+                    parsed = json::parse(resp.body);
+                } catch (const json::parse_error& e) {
+                    return swaig::FunctionResult(
+                        std::string("Web search response parse error: ") + e.what());
+                }
+
+                std::ostringstream out;
+                out << "Web search results for '" << query << "':\n";
+                if (parsed.contains("items") && parsed["items"].is_array()) {
+                    int idx = 1;
+                    for (const auto& item : parsed["items"]) {
+                        out << idx++ << ". "
+                            << item.value("title", "") << "\n"
+                            << "   " << item.value("link", "") << "\n"
+                            << "   " << item.value("snippet", "") << "\n";
+                    }
+                } else {
+                    out << "(no results)";
+                }
+                return swaig::FunctionResult(out.str());
             }
         )};
     }
