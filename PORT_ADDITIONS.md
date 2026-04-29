@@ -480,3 +480,28 @@ signalwire.swml.section.Section.to_json: cpp_structural_type: swml::Document / S
 signalwire.swml.verb.Verb: cpp_structural_type: swml::Document / Section / Verb / Schema are C++ structural types used by swml::Service internally; Python exposes equivalent state via SWMLService.get_document and inline calls.
 signalwire.swml.verb.Verb.__init__: cpp_structural_type: swml::Document / Section / Verb / Schema are C++ structural types used by swml::Service internally; Python exposes equivalent state via SWMLService.get_document and inline calls.
 signalwire.swml.verb.Verb.to_json: cpp_structural_type: swml::Document / Section / Verb / Schema are C++ structural types used by swml::Service internally; Python exposes equivalent state via SWMLService.get_document and inline calls.
+
+# 2025-08-01 — Audit harness shipping
+
+These symbols were added when the C++ port shipped its three audit
+harnesses (relay, skills, rest). The harnesses are run by the
+porting-sdk's `audit_relay_handshake.py` / `audit_skills_dispatch.py` /
+`audit_rest_transport.py` — they prove the C++ transport layer actually
+opens sockets, runs handshakes, and parses real bytes. None of these
+symbols exist in the Python reference because Python's harness invokes
+the SDK directly without needing extra plumbing.
+
+signalwire.core.swml_service.SWMLService.define_tool: cpp_swaig_lifted: per the porting-sdk architecture mandate (CHECKLIST_TEMPLATE Phase 2), the SWAIG tool registry lives on SWMLService rather than AgentBase; AgentBase inherits the same registry instead of carrying its own.
+signalwire.core.swml_service.SWMLService.register_swaig_function: cpp_swaig_lifted: per the porting-sdk architecture mandate (CHECKLIST_TEMPLATE Phase 2), the SWAIG tool registry lives on SWMLService rather than AgentBase; AgentBase inherits the same registry instead of carrying its own.
+signalwire.core.swml_service.SWMLService.on_function_call: cpp_swaig_lifted: per the porting-sdk architecture mandate (CHECKLIST_TEMPLATE Phase 2), the SWAIG tool registry lives on SWMLService rather than AgentBase; AgentBase inherits the same registry instead of carrying its own.
+signalwire.core.swml_service.SWMLService.has_tool: cpp_swaig_lifted: per the porting-sdk architecture mandate (CHECKLIST_TEMPLATE Phase 2), the SWAIG tool registry lives on SWMLService rather than AgentBase; AgentBase inherits the same registry instead of carrying its own.
+signalwire.core.swml_service.SWMLService.list_tool_names: cpp_swaig_lifted: per the porting-sdk architecture mandate (CHECKLIST_TEMPLATE Phase 2), the SWAIG tool registry lives on SWMLService rather than AgentBase; AgentBase inherits the same registry instead of carrying its own.
+signalwire.core.swml_service.SWMLService.build_tool_registry_json: cpp_introspect: helper used by serve()'s SWAIG_LIST_TOOLS env-var introspection path to dump the runtime tool registry as a parseable JSON payload between `__SWAIG_TOOLS_BEGIN__` / `__SWAIG_TOOLS_END__` sentinels — pulled out as a public testable function per the CLI guidance in CHECKLIST_TEMPLATE Phase 10.
+signalwire.core.swml_service.SWMLService.extract_introspect_payload: cpp_introspect: static helper that slices the introspect payload between the SWAIG_LIST_TOOLS sentinels in a captured stdout; reused by the swaig-test CLI in compiled-language ports.
+signalwire.core.swml_service.SWMLService.set_name: cpp_builder_setter: C++ uses set_name as the chainable property setter (matches Service::set_route / set_host / set_port). Python sets the name in the constructor only.
+signalwire.core.swml_service.SWMLService.name: cpp_accessor: trivial getter for the name field; Python exposes name as a public attribute.
+signalwire.relay.client.RelayClient.on_event: cpp_audit_hook: generic event observer registered by the relay_audit_harness (and useful for tracing/logging) so an inbound `signalwire.event` reaches user code regardless of typed routing. Python's relay client exposes the equivalent via on_call/on_message/action callbacks plus per-call hooks; C++ adds the catch-all observer because the audit harness needs to ack every event.
+signalwire.relay.client.RelayClient.send_raw_request: cpp_audit_hook: public passthrough to the internal JSON-RPC sender so the audit harness can emit explicit `signalwire.subscribe` and `signalwire.event` ack frames the audit fixture watches for.
+signalwire.relay.web_socket_client.WebSocketClient.connect_plain: cpp_plain_ws: production always uses TLS via WebSocketClient::connect; the audit fixture serves plain ws:// so we expose a separate plain-TCP connect path. Python uses the websockets library which negotiates either based on URL scheme; C++ separates the two methods because OpenSSL setup differs.
+signalwire.rest.client.RestClient.with_base_url: cpp_audit_hook: factory that constructs the REST client with an explicit pre-built base URL (used by rest_audit_harness to point at a loopback fixture). Python passes the URL via the `space` parameter; C++ deliberately keeps the space-based constructor as the production path and has with_base_url as the harness escape hatch.
+signalwire.rest.client.RestClient.project_id: cpp_accessor: trivial getter for the project_id field; Python exposes project_id as a public attribute. Used by rest_audit_harness to build `/Accounts/{proj}/...` paths matching the Twilio-LAML compat shape.

@@ -229,3 +229,40 @@ start: service.start() — Python; C++ uses serve() (which IS in the surface)
 
 ### relay/docs/events.md / relay/docs/getting-started.md
 (covered in section 8)
+
+## 10. Audit harness vocabulary (added when shipping audit harnesses)
+
+The relay/skills/rest audit harnesses use stdlib names that the doc-audit
+regex picks up but that aren't part of the SDK's public surface. They are
+listed here so audit_docs stays clean.
+
+load: std::atomic<T>::load() — used by relay_audit_harness to read a flag
+store: std::atomic<T>::store() — used by relay_audit_harness to set a flag
+position: std::sub_match::position() — used by skills_audit_harness regex iteration
+pop_back: std::string::pop_back() — used by skills_audit_harness URL trimming
+send_raw_request: relay::RelayClient::send_raw_request() — present in the
+  C++ surface but the enumerator currently misses public methods declared on
+  the same line block as overloaded factories; recorded here pending a
+  fix to scripts/enumerate_surface.py
+list_tool_names: swml::Service::list_tool_names() — same enumerator-blind
+  spot as send_raw_request; the symbol exists on the C++ surface
+set_content: httplib::Response::set_content() — third-party (cpp-httplib),
+  shows up in swmlservice_ai_sidecar.cpp because the example registers a
+  custom routing callback that writes a response directly
+Post: httplib::Server::Post() — third-party (cpp-httplib), used by
+  swmlservice_ai_sidecar.cpp's custom route registration
+c_str: std::string::c_str() — used by swmlservice_ai_sidecar.cpp when
+  building a c-string for httplib's route registration
+back: std::string::back() / std::vector::back() — stdlib container access
+compare: std::string::compare() — stdlib string comparison
+contains: nlohmann::json::contains() / std::map::contains() (C++20)
+find_first_not_of: std::string::find_first_not_of() — stdlib string scan
+find_last_not_of: std::string::find_last_not_of() — stdlib string scan
+handler: ToolDefinition::handler field reference (data member, not a method)
+is_array: nlohmann::json::is_array() — vendored
+is_boolean: nlohmann::json::is_boolean() — vendored
+is_number: nlohmann::json::is_number() — vendored
+is_object: nlohmann::json::is_object() — vendored
+is_string: nlohmann::json::is_string() — vendored
+length: std::sub_match::length() / std::string::length() — stdlib
+front: std::string::front() — stdlib container access
