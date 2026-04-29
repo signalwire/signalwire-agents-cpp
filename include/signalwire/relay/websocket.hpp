@@ -30,6 +30,11 @@ public:
     /// Connect to wss://host:port/ with TLS
     bool connect(const std::string& host, int port = 443);
 
+    /// Connect to ws://host:port/ without TLS (plain TCP). Used by audit
+    /// fixtures and local dev servers that don't speak TLS. Production
+    /// always uses TLS via the connect() overload above.
+    bool connect_plain(const std::string& host, int port);
+
     /// Close the WebSocket connection gracefully
     void close(int code = 1000, const std::string& reason = "");
 
@@ -61,6 +66,7 @@ private:
     int sock_fd_ = -1;
     void* ssl_ctx_ = nullptr;
     void* ssl_ = nullptr;
+    bool plain_ = false;  // true when connect_plain() is used (no TLS)
     std::atomic<bool> connected_{false};
     std::atomic<bool> closing_{false};
 

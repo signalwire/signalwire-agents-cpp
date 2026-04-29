@@ -15,6 +15,7 @@ WebSocketClient::WebSocketClient() = default;
 WebSocketClient::~WebSocketClient() { close(); }
 
 bool WebSocketClient::connect(const std::string&, int) { return false; }
+bool WebSocketClient::connect_plain(const std::string&, int) { return false; }
 void WebSocketClient::close(int, const std::string&) {}
 bool WebSocketClient::send(const std::string&) { return false; }
 bool WebSocketClient::do_tls_handshake(const std::string&) { return false; }
@@ -75,8 +76,10 @@ WebSocketClient::~WebSocketClient() {
     }
 }
 
-bool WebSocketClient::connect(const std::string& host, int port) {
-    // DNS resolution
+// Establish a TCP connection to host:port. On success sets sock_fd_; on
+// failure leaves sock_fd_ at -1 and reports via on_error_.
+static bool tcp_connect(int& sock_fd, const std::string& host, int port,
+                        WebSocketClient::ErrorCallback& on_error) {
     struct addrinfo hints{}, *res = nullptr;
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
@@ -84,32 +87,39 @@ bool WebSocketClient::connect(const std::string& host, int port) {
 
     int rc = ::getaddrinfo(host.c_str(), port_str.c_str(), &hints, &res);
     if (rc != 0 || !res) {
-        if (on_error_) on_error_("DNS resolution failed for " + host + ": " + gai_strerror(rc));
+        if (on_error) on_error("DNS resolution failed for " + host + ": " + gai_strerror(rc));
         return false;
     }
 
-    sock_fd_ = ::socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-    if (sock_fd_ < 0) {
+    sock_fd = ::socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+    if (sock_fd < 0) {
         ::freeaddrinfo(res);
-        if (on_error_) on_error_("Socket creation failed");
+        if (on_error) on_error("Socket creation failed");
         return false;
     }
 
-    // Set socket timeout for connect
     struct timeval tv;
     tv.tv_sec = 10;
     tv.tv_usec = 0;
-    ::setsockopt(sock_fd_, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-    ::setsockopt(sock_fd_, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+    ::setsockopt(sock_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+    ::setsockopt(sock_fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
 
-    if (::connect(sock_fd_, res->ai_addr, res->ai_addrlen) < 0) {
+    if (::connect(sock_fd, res->ai_addr, res->ai_addrlen) < 0) {
         ::freeaddrinfo(res);
-        ::close(sock_fd_);
-        sock_fd_ = -1;
-        if (on_error_) on_error_("TCP connect failed to " + host + ":" + port_str);
+        ::close(sock_fd);
+        sock_fd = -1;
+        if (on_error) on_error("TCP connect failed to " + host + ":" + port_str);
         return false;
     }
     ::freeaddrinfo(res);
+    return true;
+}
+
+bool WebSocketClient::connect(const std::string& host, int port) {
+    plain_ = false;
+    if (!tcp_connect(sock_fd_, host, port, on_error_)) {
+        return false;
+    }
 
     // TLS handshake
     if (!do_tls_handshake(host)) {
@@ -133,13 +143,32 @@ bool WebSocketClient::connect(const std::string& host, int port) {
     return true;
 }
 
+bool WebSocketClient::connect_plain(const std::string& host, int port) {
+    plain_ = true;
+    if (!tcp_connect(sock_fd_, host, port, on_error_)) {
+        return false;
+    }
+
+    // No TLS — go straight to WS upgrade over plain TCP.
+    if (!do_ws_upgrade(host)) {
+        cleanup();
+        return false;
+    }
+
+    connected_.store(true);
+    closing_.store(false);
+
+    read_thread_ = std::thread([this]() { read_loop(); });
+    return true;
+}
+
 void WebSocketClient::close(int code, const std::string& reason) {
     if (!connected_.load()) return;
     closing_.store(true);
     connected_.store(false);
 
-    // Send close frame (opcode 0x8)
-    if (ssl_) {
+    // Send close frame (opcode 0x8) if we have any active transport
+    if (ssl_ || (plain_ && sock_fd_ >= 0)) {
         std::vector<uint8_t> close_payload;
         close_payload.push_back(static_cast<uint8_t>((code >> 8) & 0xFF));
         close_payload.push_back(static_cast<uint8_t>(code & 0xFF));
@@ -404,7 +433,12 @@ bool WebSocketClient::raw_read(void* buf, size_t len) {
     size_t total = 0;
     auto* p = static_cast<char*>(buf);
     while (total < len) {
-        int n = SSL_read(static_cast<SSL*>(ssl_), p + total, static_cast<int>(len - total));
+        ssize_t n;
+        if (plain_) {
+            n = ::recv(sock_fd_, p + total, len - total, 0);
+        } else {
+            n = SSL_read(static_cast<SSL*>(ssl_), p + total, static_cast<int>(len - total));
+        }
         if (n <= 0) return false;
         total += static_cast<size_t>(n);
     }
@@ -415,7 +449,12 @@ bool WebSocketClient::raw_write(const void* buf, size_t len) {
     size_t total = 0;
     auto* p = static_cast<const char*>(buf);
     while (total < len) {
-        int n = SSL_write(static_cast<SSL*>(ssl_), p + total, static_cast<int>(len - total));
+        ssize_t n;
+        if (plain_) {
+            n = ::send(sock_fd_, p + total, len - total, 0);
+        } else {
+            n = SSL_write(static_cast<SSL*>(ssl_), p + total, static_cast<int>(len - total));
+        }
         if (n <= 0) return false;
         total += static_cast<size_t>(n);
     }

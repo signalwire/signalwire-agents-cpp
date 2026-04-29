@@ -31,6 +31,11 @@ using InboundCallHandler = std::function<void(Call&)>;
 /// Callback for inbound messages
 using InboundMessageHandler = std::function<void(const Message&)>;
 
+/// Generic callback for any inbound `signalwire.event`. Fired in addition
+/// to the typed handlers (on_call, on_message, action callbacks). Useful
+/// for tracing and for tests/audits that need to assert event delivery.
+using EventHandler = std::function<void(const RelayEvent&)>;
+
 /// Configuration for the RELAY client
 struct RelayConfig {
     std::string project;
@@ -77,6 +82,17 @@ public:
     // Call control
     void on_call(InboundCallHandler handler);
     Call dial(const json& devices);
+
+    /// Register a generic event observer. Called for every dispatched
+    /// `signalwire.event` after typed routing (on_call/on_message/action
+    /// callbacks) has run. Multiple registrations are NOT supported —
+    /// the most-recent registration wins.
+    void on_event(EventHandler handler);
+
+    /// Send a JSON-RPC request to the server. Public so harnesses and
+    /// tests can drive arbitrary methods (e.g. an explicit
+    /// `signalwire.subscribe` ack frame for the audit fixture).
+    json send_raw_request(const std::string& method, const json& params);
 
     // Messaging
     void on_message(InboundMessageHandler handler);
@@ -182,6 +198,7 @@ private:
     // Event handlers
     InboundCallHandler call_handler_;
     InboundMessageHandler message_handler_;
+    EventHandler event_handler_;
     std::mutex handler_mutex_;
 
     // Owned Call objects (for inbound and dial-created calls)

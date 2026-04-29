@@ -82,7 +82,36 @@ bool RelayClient::connect() {
         get_logger().error("WebSocket error: " + err);
     });
 
-    if (!ws_->connect(config_.host, config_.port)) {
+    // Determine TLS vs plain TCP. Production always uses TLS (wss://);
+    // the audit fixture and dev servers use plain TCP. Switch on
+    // SIGNALWIRE_RELAY_SCHEME env var (set by audit_relay_handshake.py).
+    // Also accept "127.0.0.1[:NNN]" / "localhost[:NNN]" host forms,
+    // splitting an embedded port off so we drive WebSocketClient::connect_plain
+    // with the right components.
+    std::string scheme;
+    if (const char* s = std::getenv("SIGNALWIRE_RELAY_SCHEME")) {
+        scheme = s;
+    }
+    std::string host = config_.host;
+    int port = config_.port;
+    auto colon = host.find(':');
+    if (colon != std::string::npos) {
+        std::string port_str = host.substr(colon + 1);
+        try {
+            port = std::stoi(port_str);
+        } catch (...) {
+            // leave port as configured
+        }
+        host = host.substr(0, colon);
+    }
+
+    bool ok = false;
+    if (scheme == "ws" || scheme == "ws://") {
+        ok = ws_->connect_plain(host, port);
+    } else {
+        ok = ws_->connect(host, port);
+    }
+    if (!ok) {
         get_logger().error("Failed to connect WebSocket to " + config_.host);
         return false;
     }
@@ -144,6 +173,12 @@ bool RelayClient::authenticate() {
         {"project", config_.project},
         {"token", config_.token}
     };
+    // Also expose project/token at top level. The SignalWire RELAY service
+    // accepts both shapes; some inspection points (audit fixture, debug
+    // logs) read the top-level keys, so emit them alongside the nested
+    // `authentication` block to match Python's behavior.
+    params["project"] = config_.project;
+    params["token"] = config_.token;
 
     if (!config_.contexts.empty()) {
         params["contexts"] = config_.contexts;
@@ -324,7 +359,7 @@ void RelayClient::route_event(const json& msg) {
     ev.event_type = event_type;
     ev.params = inner_params;
 
-    // Handle authorization state updates
+    // Handle authorization state updates (no observer fire — internal).
     if (event_type == "signalwire.authorization.state") {
         std::string auth_state = inner_params.value("authorization_state", "");
         if (!auth_state.empty()) {
@@ -333,34 +368,33 @@ void RelayClient::route_event(const json& msg) {
         return;
     }
 
-    // Inbound call
+    // Typed routing first (call, dial, state, message, component). Each
+    // routes to its dedicated handler; we then fall through to the
+    // generic observer so audits and tracers see every event.
     if (event_type == "calling.call.receive") {
         handle_inbound_call(ev);
-        return;
-    }
-
-    // Dial completion
-    if (event_type == "calling.call.dial") {
+    } else if (event_type == "calling.call.dial") {
         handle_dial_event(ev);
-        return;
-    }
-
-    // Call state changes
-    if (event_type == "calling.call.state") {
+    } else if (event_type == "calling.call.state") {
         handle_call_state(ev);
-        return;
-    }
-
-    // Messaging events
-    if (event_type == "messaging.receive" || event_type == "messaging.state") {
+    } else if (event_type == "messaging.receive" || event_type == "messaging.state") {
         handle_messaging_event(ev);
-        return;
+    } else if (event_type.find("calling.call.") == 0) {
+        handle_component_event(ev);
     }
 
-    // Component events (play, record, collect, tap, detect, fax, etc.)
-    if (event_type.find("calling.call.") == 0) {
-        handle_component_event(ev);
-        return;
+    // Generic event observer fires for every event regardless of type.
+    EventHandler observer;
+    {
+        std::lock_guard<std::mutex> lock(handler_mutex_);
+        observer = event_handler_;
+    }
+    if (observer) {
+        try {
+            observer(ev);
+        } catch (const std::exception& e) {
+            get_logger().error(std::string("Event observer error: ") + e.what());
+        }
     }
 }
 
@@ -531,6 +565,15 @@ void RelayClient::handle_messaging_event(const RelayEvent& ev) {
 void RelayClient::on_call(InboundCallHandler handler) {
     std::lock_guard<std::mutex> lock(handler_mutex_);
     call_handler_ = std::move(handler);
+}
+
+void RelayClient::on_event(EventHandler handler) {
+    std::lock_guard<std::mutex> lock(handler_mutex_);
+    event_handler_ = std::move(handler);
+}
+
+json RelayClient::send_raw_request(const std::string& method, const json& params) {
+    return send_request(method, params);
 }
 
 Call RelayClient::dial(const json& devices) {
