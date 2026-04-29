@@ -217,8 +217,12 @@ swaig::FunctionResult AgentBase::on_function_call(const std::string& name,
     if (!it->second.handler) {
         return swaig::FunctionResult("No handler for function: " + name);
     }
-    // TODO: token validation hook would go here when the agent-side
-    // session_manager exposes a per-tool secure check.
+    // Per-tool secure-token validation runs in the dispatcher
+    // (handle_swaig_request) before this function is reached: it checks
+    // ToolDefinition.secure, reads meta_data_token + call_id from the SWAIG
+    // body, and calls session_manager_.validate_token before invoking the
+    // handler. on_function_call is the post-validation dispatch hook —
+    // overrides should keep this contract.
     return it->second.handler(args, raw_data);
 }
 
