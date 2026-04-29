@@ -18,7 +18,11 @@ namespace agent {
 
 AgentBase::AgentBase(const std::string& name, const std::string& route,
                      const std::string& host, int port)
-    : name_(name), route_(route), host_(host), port_(port) {
+    : swml::Service() {
+    name_ = name;
+    route_ = route;
+    host_ = host;
+    port_ = port;
     if (!route_.empty() && route_.front() != '/') {
         route_ = "/" + route_;
     }
@@ -34,43 +38,54 @@ AgentBase::~AgentBase() {
 }
 
 AgentBase::AgentBase(const AgentBase& other)
-    : name_(other.name_), route_(other.route_), host_(other.host_), port_(other.port_),
-      auth_user_(other.auth_user_), auth_pass_(other.auth_pass_),
-      auth_initialized_(other.auth_initialized_),
-      raw_prompt_text_(other.raw_prompt_text_),
-      post_prompt_text_(other.post_prompt_text_),
-      post_prompt_url_(other.post_prompt_url_),
-      pom_sections_(other.pom_sections_),
-      use_pom_(other.use_pom_),
-      tools_(other.tools_), tool_order_(other.tool_order_),
-      datamap_functions_(other.datamap_functions_),
-      function_includes_(other.function_includes_),
-      hints_(other.hints_), languages_(other.languages_),
-      pronunciations_(other.pronunciations_),
-      ai_params_(other.ai_params_), global_data_(other.global_data_),
-      native_functions_(other.native_functions_),
-      internal_fillers_(other.internal_fillers_),
-      debug_events_(other.debug_events_),
-      prompt_llm_params_(other.prompt_llm_params_),
-      post_prompt_llm_params_(other.post_prompt_llm_params_),
-      pre_answer_verbs_(other.pre_answer_verbs_),
-      answer_verbs_(other.answer_verbs_),
-      post_answer_verbs_(other.post_answer_verbs_),
-      post_ai_verbs_(other.post_ai_verbs_),
-      context_builder_(other.context_builder_),
-      loaded_skills_(other.loaded_skills_),
-      skill_configs_(other.skill_configs_),
-      mcp_servers_(other.mcp_servers_),
-      mcp_server_enabled_(other.mcp_server_enabled_),
-      proxy_url_(other.proxy_url_),
-      webhook_url_(other.webhook_url_),
-      swaig_query_params_(other.swaig_query_params_),
-      debug_routes_(other.debug_routes_),
-      sip_routing_enabled_(other.sip_routing_enabled_),
-      sip_usernames_(other.sip_usernames_),
-      auto_map_sip_(other.auto_map_sip_),
-      summary_callback_(other.summary_callback_),
-      debug_event_callback_(other.debug_event_callback_) {
+    : swml::Service() {
+    // Service-level state copied through the protected fields the parent owns.
+    name_ = other.name_;
+    route_ = other.route_;
+    host_ = other.host_;
+    port_ = other.port_;
+    auth_user_ = other.auth_user_;
+    auth_pass_ = other.auth_pass_;
+    auth_initialized_ = other.auth_initialized_;
+    tools_ = other.tools_;
+    tool_order_ = other.tool_order_;
+    registered_swaig_functions_ = other.registered_swaig_functions_;
+
+    raw_prompt_text_ = other.raw_prompt_text_;
+    post_prompt_text_ = other.post_prompt_text_;
+    post_prompt_url_ = other.post_prompt_url_;
+    pom_sections_ = other.pom_sections_;
+    use_pom_ = other.use_pom_;
+    datamap_functions_ = other.datamap_functions_;
+    function_includes_ = other.function_includes_;
+    hints_ = other.hints_;
+    languages_ = other.languages_;
+    pronunciations_ = other.pronunciations_;
+    ai_params_ = other.ai_params_;
+    global_data_ = other.global_data_;
+    native_functions_ = other.native_functions_;
+    internal_fillers_ = other.internal_fillers_;
+    debug_events_ = other.debug_events_;
+    prompt_llm_params_ = other.prompt_llm_params_;
+    post_prompt_llm_params_ = other.post_prompt_llm_params_;
+    pre_answer_verbs_ = other.pre_answer_verbs_;
+    answer_verbs_ = other.answer_verbs_;
+    post_answer_verbs_ = other.post_answer_verbs_;
+    post_ai_verbs_ = other.post_ai_verbs_;
+    context_builder_ = other.context_builder_;
+    loaded_skills_ = other.loaded_skills_;
+    skill_configs_ = other.skill_configs_;
+    mcp_servers_ = other.mcp_servers_;
+    mcp_server_enabled_ = other.mcp_server_enabled_;
+    proxy_url_ = other.proxy_url_;
+    webhook_url_ = other.webhook_url_;
+    swaig_query_params_ = other.swaig_query_params_;
+    debug_routes_ = other.debug_routes_;
+    sip_routing_enabled_ = other.sip_routing_enabled_;
+    sip_usernames_ = other.sip_usernames_;
+    auto_map_sip_ = other.auto_map_sip_;
+    summary_callback_ = other.summary_callback_;
+    debug_event_callback_ = other.debug_event_callback_;
     // Note: server_ is NOT copied; session_manager_ gets a new secret
 }
 
@@ -168,28 +183,27 @@ AgentBase& AgentBase::set_use_pom(bool use_pom) {
 // Tool Methods
 // ============================================================================
 
+// Covariant overrides: Service does the registry work; AgentBase just
+// returns *this typed as AgentBase& so existing fluent chains keep their
+// derived-type reference.
+
 AgentBase& AgentBase::define_tool(const swaig::ToolDefinition& tool) {
-    tools_[tool.name] = tool;
-    if (std::find(tool_order_.begin(), tool_order_.end(), tool.name) == tool_order_.end()) {
-        tool_order_.push_back(tool.name);
-    }
+    swml::Service::define_tool(tool);
     return *this;
 }
 
 AgentBase& AgentBase::define_tool(const std::string& name, const std::string& description,
                                    const json& parameters, swaig::ToolHandler handler,
                                    bool secure) {
-    swaig::ToolDefinition tool;
-    tool.name = name;
-    tool.description = description;
-    tool.parameters = parameters;
-    tool.handler = std::move(handler);
-    tool.secure = secure;
-    return define_tool(tool);
+    swml::Service::define_tool(name, description, parameters, std::move(handler), secure);
+    return *this;
 }
 
 AgentBase& AgentBase::register_swaig_function(const json& func_def) {
+    // AgentBase additionally tracks datamap functions for SWML rendering.
+    // Service handles registry/order tracking.
     datamap_functions_.push_back(func_def);
+    swml::Service::register_swaig_function(func_def);
     return *this;
 }
 
@@ -200,17 +214,15 @@ swaig::FunctionResult AgentBase::on_function_call(const std::string& name,
     if (it == tools_.end()) {
         return swaig::FunctionResult("Unknown function: " + name);
     }
-
     if (!it->second.handler) {
         return swaig::FunctionResult("No handler for function: " + name);
     }
-
+    // TODO: token validation hook would go here when the agent-side
+    // session_manager exposes a per-tool secure check.
     return it->second.handler(args, raw_data);
 }
 
-bool AgentBase::has_tool(const std::string& name) const {
-    return tools_.find(name) != tools_.end();
-}
+// has_tool is inherited from Service.
 
 std::vector<std::string> AgentBase::list_tools() const {
     return tool_order_;

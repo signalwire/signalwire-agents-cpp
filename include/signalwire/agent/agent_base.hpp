@@ -111,7 +111,7 @@ struct SwaigQueryParam {
 // AgentBase
 // ============================================================================
 
-class AgentBase {
+class AgentBase : public swml::Service {
     friend class signalwire::server::AgentServer;
 public:
     explicit AgentBase(const std::string& name = "agent",
@@ -125,11 +125,14 @@ public:
     AgentBase& operator=(const AgentBase&) = delete;
 
     // ========================================================================
-    // Identity
+    // Identity — name() / route() inherited from Service. Covariant
+    // override on set_name so existing fluent chains like
+    // `agent.set_name(..).set_prompt_text(..)` keep an AgentBase& reference.
     // ========================================================================
-    const std::string& name() const { return name_; }
-    AgentBase& set_name(const std::string& n) { name_ = n; return *this; }
-    const std::string& route() const { return route_; }
+    AgentBase& set_name(const std::string& n) {
+        swml::Service::set_name(n);
+        return *this;
+    }
 
     // ========================================================================
     // Prompt Methods (POM)
@@ -207,6 +210,11 @@ public:
     /// simultaneously-active tools per call. Use
     /// contexts::Step::set_functions to partition tools across steps
     /// so only the relevant subset is active at any moment.
+    // define_tool, register_swaig_function, on_function_call, has_tool are
+    // inherited from Service. AgentBase keeps thin covariant overrides on
+    // the chainable methods so existing fluent-chain users keep an AgentBase
+    // reference. on_function_call is overridden to add session-token
+    // validation.
     AgentBase& define_tool(const swaig::ToolDefinition& tool);
     AgentBase& define_tool(const std::string& name, const std::string& description,
                             const json& parameters, swaig::ToolHandler handler,
@@ -214,8 +222,7 @@ public:
     AgentBase& register_swaig_function(const json& func_def);
     swaig::FunctionResult on_function_call(const std::string& name,
                                             const json& args,
-                                            const json& raw_data);
-    bool has_tool(const std::string& name) const;
+                                            const json& raw_data) override;
     std::vector<std::string> list_tools() const;
 
     // ========================================================================
@@ -437,15 +444,9 @@ protected:
     // State
     // ========================================================================
 
-    std::string name_;
-    std::string route_;
-    std::string host_;
-    int port_;
-
-    // Auth
-    std::string auth_user_;
-    std::string auth_pass_;
-    bool auth_initialized_ = false;
+    // name_, route_, host_, port_, auth_user_, auth_pass_, auth_initialized_,
+    // tools_, tool_order_, registered_swaig_functions_ are inherited from
+    // Service. The fields below are agent-specific.
 
     // Prompt
     std::optional<std::string> raw_prompt_text_;
@@ -454,9 +455,8 @@ protected:
     std::vector<PomSection> pom_sections_;
     bool use_pom_ = true;
 
-    // Tools
-    std::map<std::string, swaig::ToolDefinition> tools_;
-    std::vector<std::string> tool_order_;
+    // Tools — tools_, tool_order_, registered_swaig_functions_ are inherited
+    // from Service (lifted so non-agent SWMLService instances can host SWAIG).
     std::vector<json> datamap_functions_;  // DataMap (server-side) functions
     std::vector<json> function_includes_;
 

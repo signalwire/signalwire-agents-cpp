@@ -65,6 +65,7 @@ static std::vector<TestCase>& get_tests() {
 // Include all test files
 // Original test files
 #include "test_swml.cpp"
+#include "test_swml_service_swaig.cpp"
 #include "test_function_result.cpp"
 #include "test_security.cpp"
 #include "test_datamap.cpp"

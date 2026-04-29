@@ -3,9 +3,14 @@
 #include "httplib.h"
 #include <openssl/crypto.h>
 #include <openssl/rand.h>
+#include <regex>
 
 namespace signalwire {
 namespace swml {
+
+namespace {
+const std::regex kSwaigFnName("^[a-zA-Z_][a-zA-Z0-9_]*$");
+}
 
 Service::Service() {
     schema_.load_embedded();
@@ -13,6 +18,11 @@ Service::Service() {
 
 Service::~Service() {
     stop();
+}
+
+Service& Service::set_name(const std::string& name) {
+    name_ = name;
+    return *this;
 }
 
 Service& Service::set_route(const std::string& route) {
@@ -188,6 +198,132 @@ json Service::on_render_swml() const {
     return document_.to_json();
 }
 
+json Service::render_main_swml(const httplib::Request&) const {
+    return on_render_swml();
+}
+
+std::pair<Service*, std::optional<json>>
+Service::swaig_pre_dispatch(const json&, const std::string&) {
+    return { this, std::nullopt };
+}
+
+void Service::register_additional_routes(httplib::Server&) {}
+
+// ============================================================================
+// SWAIG tool registry (lifted from AgentBase)
+// ============================================================================
+
+Service& Service::define_tool(const std::string& name, const std::string& description,
+                                const json& parameters, swaig::ToolHandler handler,
+                                bool secure) {
+    swaig::ToolDefinition td;
+    td.name = name;
+    td.description = description;
+    td.parameters = parameters;
+    td.handler = std::move(handler);
+    td.secure = secure;
+    tools_[name] = std::move(td);
+    if (std::find(tool_order_.begin(), tool_order_.end(), name) == tool_order_.end()) {
+        tool_order_.push_back(name);
+    }
+    return *this;
+}
+
+Service& Service::define_tool(const swaig::ToolDefinition& tool) {
+    tools_[tool.name] = tool;
+    if (std::find(tool_order_.begin(), tool_order_.end(), tool.name) == tool_order_.end()) {
+        tool_order_.push_back(tool.name);
+    }
+    return *this;
+}
+
+Service& Service::register_swaig_function(const json& func_def) {
+    if (!func_def.contains("function")) return *this;
+    std::string name = func_def["function"].get<std::string>();
+    registered_swaig_functions_.push_back(func_def);
+    if (std::find(tool_order_.begin(), tool_order_.end(), name) == tool_order_.end()) {
+        tool_order_.push_back(name);
+    }
+    return *this;
+}
+
+swaig::FunctionResult Service::on_function_call(const std::string& name,
+                                                  const json& args,
+                                                  const json& raw_data) {
+    auto it = tools_.find(name);
+    if (it == tools_.end() || !it->second.handler) {
+        swaig::FunctionResult fr;
+        fr.set_response("Function '" + name + "' not found");
+        return fr;
+    }
+    return it->second.handler(args, raw_data);
+}
+
+bool Service::has_tool(const std::string& name) const {
+    return tools_.count(name) > 0;
+}
+
+std::vector<std::string> Service::list_tool_names() const {
+    return tool_order_;
+}
+
+void Service::handle_swaig_endpoint(const httplib::Request& req, httplib::Response& res) {
+    add_security_headers(res);
+    if (!validate_auth(req, res)) return;
+
+    if (req.method == "GET") {
+        json swml = render_main_swml(req);
+        res.set_content(swml.dump(), "application/json");
+        return;
+    }
+
+    json payload;
+    try {
+        payload = req.body.empty() ? json::object() : json::parse(req.body);
+    } catch (const std::exception&) {
+        res.status = 400;
+        res.set_content("{\"error\":\"Invalid JSON\"}", "application/json");
+        return;
+    }
+    if (!payload.is_object() || !payload.contains("function")) {
+        res.status = 400;
+        res.set_content("{\"error\":\"Missing function name\"}", "application/json");
+        return;
+    }
+    std::string func_name = payload["function"].get<std::string>();
+    if (func_name.empty()) {
+        res.status = 400;
+        res.set_content("{\"error\":\"Missing function name\"}", "application/json");
+        return;
+    }
+    if (!std::regex_match(func_name, kSwaigFnName)) {
+        res.status = 400;
+        res.set_content(json{{"error", "Invalid function name format: '" + func_name + "'"}}.dump(),
+                        "application/json");
+        return;
+    }
+
+    // Argument extraction: nested {argument:{parsed:[...]}} OR flat {arguments}
+    json args = json::object();
+    if (payload.contains("argument") && payload["argument"].is_object()) {
+        const auto& arg = payload["argument"];
+        if (arg.contains("parsed") && arg["parsed"].is_array() && !arg["parsed"].empty()) {
+            args = arg["parsed"][0];
+        }
+    } else if (payload.contains("arguments") && payload["arguments"].is_object()) {
+        args = payload["arguments"];
+    }
+
+    auto [target, short_circuit] = swaig_pre_dispatch(payload, func_name);
+    if (short_circuit.has_value()) {
+        res.set_content(short_circuit->dump(), "application/json");
+        return;
+    }
+
+    auto result = target->on_function_call(func_name, args, payload);
+    res.set_content(result.to_json().dump(), "application/json");
+}
+
 void Service::setup_routes(httplib::Server& server) {
     // Health endpoint (no auth)
     server.Get("/health", [](const httplib::Request&, httplib::Response& res) {
@@ -199,11 +335,22 @@ void Service::setup_routes(httplib::Server& server) {
         res.set_content("{\"status\":\"ready\"}", "application/json");
     });
 
+    // SWAIG endpoint — GET returns SWML, POST dispatches a tool.
+    std::string base_path = (route_ == "/") ? std::string() : route_;
+    auto swaig_handler = [this](const httplib::Request& req, httplib::Response& res) {
+        handle_swaig_endpoint(req, res);
+    };
+    server.Get((base_path + "/swaig").c_str(), swaig_handler);
+    server.Post((base_path + "/swaig").c_str(), swaig_handler);
+
+    // Subclass extension hook (AgentBase adds /post_prompt, /mcp).
+    register_additional_routes(server);
+
     // Main SWML endpoint
     auto swml_handler = [this](const httplib::Request& req, httplib::Response& res) {
         add_security_headers(res);
         if (!validate_auth(req, res)) return;
-        json swml = render_swml();
+        json swml = render_main_swml(req);
         res.set_content(swml.dump(), "application/json");
     };
     server.Get(route_.c_str(), swml_handler);

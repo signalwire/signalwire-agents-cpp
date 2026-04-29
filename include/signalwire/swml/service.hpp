@@ -5,9 +5,12 @@
 #include <optional>
 #include <map>
 #include <mutex>
+#include <vector>
 #include <nlohmann/json.hpp>
 #include "signalwire/swml/document.hpp"
 #include "signalwire/swml/schema.hpp"
+#include "signalwire/swaig/tool_definition.hpp"
+#include "signalwire/swaig/function_result.hpp"
 #include "signalwire/logging.hpp"
 
 // Forward declare httplib types to avoid including the massive header here
@@ -23,7 +26,9 @@ namespace swml {
 
 using json = nlohmann::json;
 
-/// Base SWML service providing HTTP server, auth, and verb methods
+/// Base SWML service providing HTTP server, auth, and verb methods.
+/// Also hosts SWAIG functions: any Service (sidecar, non-agent verb host)
+/// can register tools and serve them on /swaig without subclassing AgentBase.
 class Service {
 public:
     Service();
@@ -32,6 +37,10 @@ public:
     // ========================================================================
     // Configuration
     // ========================================================================
+
+    /// Set the service name (default: "service")
+    Service& set_name(const std::string& name);
+    const std::string& name() const { return name_; }
 
     /// Set the route path for this service (default: "/")
     Service& set_route(const std::string& route);
@@ -113,6 +122,29 @@ public:
     json render_swml() const;
 
     // ========================================================================
+    // SWAIG tool registry (lifted from AgentBase)
+    // ========================================================================
+
+    /// Define a SWAIG function the AI can call.
+    Service& define_tool(const std::string& name, const std::string& description,
+                          const json& parameters, swaig::ToolHandler handler,
+                          bool secure = false);
+    Service& define_tool(const swaig::ToolDefinition& tool);
+
+    /// Register a raw SWAIG function definition (e.g. DataMap tools).
+    Service& register_swaig_function(const json& func_def);
+
+    /// Dispatch a function call to the registered handler.
+    /// Returns a FunctionResult; if the function isn't registered, returns
+    /// a FunctionResult with a "Function not found" response.
+    virtual swaig::FunctionResult on_function_call(const std::string& name,
+                                                    const json& args,
+                                                    const json& raw_data);
+
+    bool has_tool(const std::string& name) const;
+    std::vector<std::string> list_tool_names() const;
+
+    // ========================================================================
     // HTTP Server
     // ========================================================================
 
@@ -135,13 +167,34 @@ protected:
     /// Override to customize SWML rendering
     virtual json on_render_swml() const;
 
+    /// Extension point: render the SWML document for the main path or
+    /// for GET /swaig. Default returns the currently-built Document.
+    /// AgentBase overrides to emit prompt + AI verb at request time.
+    virtual json render_main_swml(const httplib::Request& req) const;
+
+    /// Extension point: invoked between argument parsing and function
+    /// dispatch on POST /swaig. Returns a target Service* (defaults to
+    /// `this`) and an optional short-circuit JSON. If short_circuit is
+    /// non-null, it's returned as the SWAIG response without calling
+    /// on_function_call. AgentBase overrides for token validation.
+    virtual std::pair<Service*, std::optional<json>>
+        swaig_pre_dispatch(const json& request_data, const std::string& func_name);
+
+    /// Extension point: register additional HTTP routes. AgentBase uses
+    /// this to add /post_prompt, /mcp, etc.
+    virtual void register_additional_routes(httplib::Server& server);
+
     /// Add security headers to response
     static void add_security_headers(httplib::Response& res);
 
     /// Validate basic auth from a request; returns true if valid
     bool validate_auth(const httplib::Request& req, httplib::Response& res) const;
 
+    /// Handle GET/POST /swaig (lifted from AgentBase).
+    void handle_swaig_endpoint(const httplib::Request& req, httplib::Response& res);
+
     Document document_;
+    std::string name_ = "service";
     std::string route_ = "/";
     std::string host_ = "0.0.0.0";
     int port_ = 3000;
@@ -152,9 +205,16 @@ protected:
 
     Schema schema_;
 
+    // SWAIG tool registry — protected so subclasses can read/write directly
+    // when needed (e.g. AgentBase's per-tool secure flag, BuildSwaigBlock).
+    std::map<std::string, swaig::ToolDefinition> tools_;
+    std::vector<std::string> tool_order_;
+    std::vector<json> registered_swaig_functions_;
+
+    void setup_routes(httplib::Server& server);
+
 private:
     void init_auth();
-    void setup_routes(httplib::Server& server);
 
     std::unique_ptr<httplib::Server> server_;
 };
