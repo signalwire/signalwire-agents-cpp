@@ -280,6 +280,11 @@ MIXIN_PROJECTIONS: dict[tuple[str, str], list[str]] = {
     ("signalwire.core.mixins.tool_mixin", "ToolMixin"): [
         "define_tool", "on_function_call", "register_swaig_function",
     ],
+    ("signalwire.core.agent.tools.registry", "ToolRegistry"): [
+        "define_tool", "register_swaig_function",
+        "has_function", "get_function", "get_all_functions",
+        "remove_function",
+    ],
     ("signalwire.core.mixins.web_mixin", "WebMixin"): [
         "enable_debug_routes", "manual_set_proxy_url", "run", "serve",
         "set_dynamic_config_callback",

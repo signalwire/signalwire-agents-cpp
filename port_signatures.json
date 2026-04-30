@@ -217,6 +217,42 @@
         }
       }
     },
+    "signalwire.core.agent.tools.registry": {
+      "classes": {
+        "ToolRegistry": {
+          "methods": {
+            "define_tool": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "tool",
+                  "type": "class:signalwire.core.swaig_function.ToolDefinition",
+                  "required": true
+                }
+              ],
+              "returns": "class:signalwire.core.agent_base.AgentBase"
+            },
+            "register_swaig_function": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "func_def",
+                  "type": "int",
+                  "required": true
+                }
+              ],
+              "returns": "class:signalwire.core.agent_base.AgentBase"
+            }
+          }
+        }
+      }
+    },
     "signalwire.core.agent_base": {
       "classes": {
         "AgentBase": {
