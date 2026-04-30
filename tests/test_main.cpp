@@ -138,6 +138,9 @@ static std::vector<TestCase>& get_tests() {
 #include "test_logging.cpp"
 #include "test_cli.cpp"
 
+// Top-level signalwire:: convenience entry points
+#include "test_signalwire_top_level.cpp"
+
 int main() {
     // Suppress logging during tests
     signalwire::Logger::instance().suppress();

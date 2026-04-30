@@ -2,6 +2,51 @@
   "version": "2",
   "generated_from": "signalwire-cpp via libclang",
   "modules": {
+    "signalwire": {
+      "functions": {
+        "RestClient": {
+          "params": [
+            {
+              "name": "args",
+              "type": "list<string>",
+              "required": false,
+              "default": null
+            },
+            {
+              "name": "kwargs",
+              "type": "dict<string,string>",
+              "required": false,
+              "default": null
+            }
+          ],
+          "returns": "class:signalwire.rest.client.RestClient"
+        },
+        "add_skill_directory": {
+          "params": [
+            {
+              "name": "path",
+              "type": "string",
+              "required": true
+            }
+          ],
+          "returns": "void"
+        },
+        "list_skills_with_params": {
+          "params": [],
+          "returns": "dict<string,dict<string,string>>"
+        },
+        "register_skill": {
+          "params": [
+            {
+              "name": "factory",
+              "type": "class:skills.skill_factory.SkillFactory",
+              "required": true
+            }
+          ],
+          "returns": "void"
+        }
+      }
+    },
     "signalwire.agent.language_config": {
       "classes": {
         "LanguageConfig": {

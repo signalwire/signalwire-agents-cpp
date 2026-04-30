@@ -428,8 +428,14 @@ def collect(
         py_module = native_ns_to_module(ns) or ns.replace("::", ".")
         if not py_module.startswith("signalwire"):
             py_module = "signalwire." + py_module
-        # camel_to_snake: C++ module functions are already snake-case.
-        fname = camel_to_snake(entry["name"])
+        # camel_to_snake: C++ module functions are usually snake-case
+        # already, but Python's top-level ``signalwire.RestClient`` is a
+        # PascalCase factory function (mirroring the class name). Preserve
+        # that when the C++ source-side function is also PascalCase.
+        if entry["name"][:1].isupper():
+            fname = entry["name"]
+        else:
+            fname = camel_to_snake(entry["name"])
         if (py_module, fname) not in ref_free_fn_targets:
             continue
         ctx = f"{py_module}.{fname}"
