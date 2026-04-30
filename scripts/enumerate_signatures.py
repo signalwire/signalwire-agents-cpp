@@ -45,7 +45,7 @@ if not PSDK.is_dir():
 
 sys.path.insert(0, str(HERE))
 from enumerate_surface import (  # type: ignore
-    CLASS_MODULE_MAP, MIXIN_PROJECTIONS, camel_to_snake,
+    CLASS_MODULE_MAP, CLASS_RENAME_MAP, MIXIN_PROJECTIONS, camel_to_snake,
     module_for_class, native_ns_to_module,
 )
 
@@ -291,7 +291,12 @@ def collect(raw_entries: list[dict], aliases: dict) -> tuple[dict, list]:
             by_class[key] = {"namespace": ns, "name": name, "methods": list(entry["methods"])}
 
     for (ns, name), entry in by_class.items():
-        if name not in CLASS_MODULE_MAP:
+        # Check CLASS_RENAME_MAP first: (cpp_namespace, cpp_class) →
+        # (python_module, python_class). Used for Service → SWMLService etc.
+        rename_key = (ns, name)
+        if rename_key in CLASS_RENAME_MAP:
+            mod, name = CLASS_RENAME_MAP[rename_key]
+        elif name not in CLASS_MODULE_MAP:
             mod = module_for_class(name, ns)
             if mod is None:
                 continue
