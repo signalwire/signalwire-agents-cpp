@@ -229,6 +229,15 @@ def walk_translation_unit(tu: TranslationUnit, file_filter: Path) -> list[dict]:
                     if child.access_specifier.name != "PUBLIC":
                         continue
                     methods.append(extract_method(child, is_ctor=True))
+                elif child.kind in (CursorKind.CLASS_DECL, CursorKind.STRUCT_DECL):
+                    # Nested class / struct (RestClient::FabricNamespace,
+                    # RestClient::CallingNamespace, etc.). Visit it under
+                    # the SAME namespace path so it surfaces as a
+                    # standalone class — Python represents these as
+                    # peer classes (CallingNamespace), not children of
+                    # RestClient.
+                    if child.access_specifier.name == "PUBLIC":
+                        visit(child, ns_path)
             if methods:
                 entries.append({
                     "namespace": ns_str,

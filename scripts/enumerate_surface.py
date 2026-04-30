@@ -108,6 +108,29 @@ CLASS_MODULE_MAP: dict[str, str] = {
     "CrudResource": "signalwire.rest._base",
     "SignalWireRestError": "signalwire.rest._base",
     "RestClient": "signalwire.rest.client",
+    # rest namespaces — C++ has 21 nested ::Namespace structs inside
+    # RestClient. Map each to the Python canonical submodule path.
+    "AddressesNamespace": "signalwire.rest.namespaces.addresses",
+    "CallingNamespace": "signalwire.rest.namespaces.calling",
+    "ChatNamespace": "signalwire.rest.namespaces.chat",
+    "CompatNamespace": "signalwire.rest.namespaces.compat",
+    "DatasphereNamespace": "signalwire.rest.namespaces.datasphere",
+    "FabricNamespace": "signalwire.rest.namespaces.fabric",
+    "ImportedNumbersNamespace": "signalwire.rest.namespaces.imported_numbers",
+    "LogsNamespace": "signalwire.rest.namespaces.logs",
+    "LookupNamespace": "signalwire.rest.namespaces.lookup",
+    "MFANamespace": "signalwire.rest.namespaces.mfa",
+    "NumberGroupsNamespace": "signalwire.rest.namespaces.number_groups",
+    "PhoneNumbersNamespace": "signalwire.rest.namespaces.phone_numbers",
+    "ProjectNamespace": "signalwire.rest.namespaces.project",
+    "PubSubNamespace": "signalwire.rest.namespaces.pubsub",
+    "QueuesNamespace": "signalwire.rest.namespaces.queues",
+    "RecordingsNamespace": "signalwire.rest.namespaces.recordings",
+    "RegistryNamespace": "signalwire.rest.namespaces.registry",
+    "ShortCodesNamespace": "signalwire.rest.namespaces.short_codes",
+    "SipProfileNamespace": "signalwire.rest.namespaces.sip_profile",
+    "VerifiedCallersNamespace": "signalwire.rest.namespaces.verified_callers",
+    "VideoNamespace": "signalwire.rest.namespaces.video",
 
     # -- relay ------------------------------------------------------------
     "RelayClient": "signalwire.relay.client",
@@ -139,6 +162,48 @@ CLASS_RENAME_MAP: dict[tuple[str, str], tuple[str, str]] = {
     # (source_ns, source_class) -> (target_module, target_class)
     ("signalwire::swml", "Service"): (
         "signalwire.core.swml_service", "SWMLService",
+    ),
+    # C++ uses ``XxxNamespace`` for all REST namespaces; Python uses
+    # ``XxxResource`` for single-resource namespaces and ``XxxNamespace``
+    # for multi-resource ones. Map the single-resource cases.
+    ("signalwire::rest", "AddressesNamespace"): (
+        "signalwire.rest.namespaces.addresses", "AddressesResource",
+    ),
+    ("signalwire::rest", "ChatNamespace"): (
+        "signalwire.rest.namespaces.chat", "ChatResource",
+    ),
+    ("signalwire::rest", "ImportedNumbersNamespace"): (
+        "signalwire.rest.namespaces.imported_numbers", "ImportedNumbersResource",
+    ),
+    ("signalwire::rest", "LookupNamespace"): (
+        "signalwire.rest.namespaces.lookup", "LookupResource",
+    ),
+    ("signalwire::rest", "MFANamespace"): (
+        "signalwire.rest.namespaces.mfa", "MfaResource",
+    ),
+    ("signalwire::rest", "NumberGroupsNamespace"): (
+        "signalwire.rest.namespaces.number_groups", "NumberGroupsResource",
+    ),
+    ("signalwire::rest", "PhoneNumbersNamespace"): (
+        "signalwire.rest.namespaces.phone_numbers", "PhoneNumbersResource",
+    ),
+    ("signalwire::rest", "PubSubNamespace"): (
+        "signalwire.rest.namespaces.pubsub", "PubSubResource",
+    ),
+    ("signalwire::rest", "QueuesNamespace"): (
+        "signalwire.rest.namespaces.queues", "QueuesResource",
+    ),
+    ("signalwire::rest", "RecordingsNamespace"): (
+        "signalwire.rest.namespaces.recordings", "RecordingsResource",
+    ),
+    ("signalwire::rest", "ShortCodesNamespace"): (
+        "signalwire.rest.namespaces.short_codes", "ShortCodesResource",
+    ),
+    ("signalwire::rest", "SipProfileNamespace"): (
+        "signalwire.rest.namespaces.sip_profile", "SipProfileResource",
+    ),
+    ("signalwire::rest", "VerifiedCallersNamespace"): (
+        "signalwire.rest.namespaces.verified_callers", "VerifiedCallersResource",
     ),
 }
 
