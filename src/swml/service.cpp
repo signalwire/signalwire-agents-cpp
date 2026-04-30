@@ -231,6 +231,18 @@ json Service::render_main_swml(const httplib::Request&) const {
     return on_render_swml();
 }
 
+std::optional<json> Service::on_request(
+    const std::optional<json>& request_data,
+    const std::optional<std::string>& callback_path) {
+    return on_swml_request(request_data, callback_path);
+}
+
+std::optional<json> Service::on_swml_request(
+    const std::optional<json>& /*request_data*/,
+    const std::optional<std::string>& /*callback_path*/) {
+    return std::nullopt;
+}
+
 std::pair<Service*, std::optional<json>>
 Service::swaig_pre_dispatch(const json&, const std::string&) {
     return { this, std::nullopt };

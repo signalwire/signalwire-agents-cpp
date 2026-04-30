@@ -1,6 +1,7 @@
 // Web mixin tests — webhook URLs, proxy detection, query params, dynamic config
 
 #include "signalwire/agent/agent_base.hpp"
+#include "signalwire/swml/service.hpp"
 
 using namespace signalwire::agent;
 using json = nlohmann::json;
@@ -246,5 +247,69 @@ TEST(web_auto_map_sip_usernames) {
     AgentBase agent;
     agent.auto_map_sip_usernames(true);
     // No crash
+    return true;
+}
+
+// ========================================================================
+// WebMixin parity: on_request / on_swml_request
+//
+// Python parity:
+//   tests/unit/core/mixins/test_web_mixin.py::
+//     test_on_request_delegates_to_on_swml_request
+//     test_on_swml_request_called
+// ========================================================================
+
+namespace {
+class CustomSwmlService : public signalwire::swml::Service {
+public:
+    json last_request_data;
+    std::string last_callback_path;
+    std::optional<json> custom_return;
+
+    std::optional<json> on_swml_request(
+        const std::optional<json>& request_data,
+        const std::optional<std::string>& callback_path) override {
+        last_request_data = request_data.value_or(json{});
+        last_callback_path = callback_path.value_or(std::string{});
+        return custom_return;
+    }
+};
+}
+
+TEST(web_on_request_delegates_to_on_swml_request) {
+    CustomSwmlService svc;
+    svc.custom_return = json{{"custom", true}};
+
+    json rd{{"data", "val"}};
+    auto result = svc.on_request(rd, std::string{"/cb"});
+
+    ASSERT_EQ(svc.last_request_data, rd);
+    ASSERT_EQ(svc.last_callback_path, std::string{"/cb"});
+    ASSERT_TRUE(result.has_value());
+    ASSERT_EQ((*result)["custom"].get<bool>(), true);
+    return true;
+}
+
+TEST(web_on_swml_request_default_returns_nullopt) {
+    signalwire::swml::Service svc;
+    auto result = svc.on_swml_request(std::nullopt, std::nullopt);
+    ASSERT_FALSE(result.has_value());
+    return true;
+}
+
+TEST(web_on_request_default_returns_nullopt) {
+    signalwire::swml::Service svc;
+    auto result = svc.on_request(std::nullopt, std::nullopt);
+    ASSERT_FALSE(result.has_value());
+    return true;
+}
+
+TEST(web_on_request_passes_nulls_to_hook) {
+    CustomSwmlService svc;
+    svc.custom_return = std::nullopt;
+    auto result = svc.on_request(std::nullopt, std::nullopt);
+    ASSERT_FALSE(result.has_value());
+    ASSERT_EQ(svc.last_request_data, json{});
+    ASSERT_EQ(svc.last_callback_path, std::string{});
     return true;
 }

@@ -219,6 +219,29 @@ public:
     /// Generate a random hex string of given byte length
     static std::string generate_random_hex(size_t bytes);
 
+    /// Customization hook called when SWML is requested. Default
+    /// delegates to on_swml_request and returns its result. Subclasses
+    /// typically override on_swml_request rather than this method.
+    ///
+    /// Returns std::nullopt to use the default SWML rendering, or a
+    /// non-null JSON with modifications to merge into the rendered
+    /// document.
+    ///
+    /// Python parity: WebMixin.on_request(request_data, callback_path).
+    /// The Python third `request` argument is FastAPI-specific and
+    /// intentionally not mirrored on the cross-language API.
+    virtual std::optional<json> on_request(
+        const std::optional<json>& request_data = std::nullopt,
+        const std::optional<std::string>& callback_path = std::nullopt);
+
+    /// Customization point for subclasses to modify SWML based on
+    /// request data. Default returns std::nullopt (no modification).
+    ///
+    /// Python parity: WebMixin.on_swml_request(request_data, callback_path).
+    virtual std::optional<json> on_swml_request(
+        const std::optional<json>& request_data = std::nullopt,
+        const std::optional<std::string>& callback_path = std::nullopt);
+
 protected:
     /// Override to customize SWML rendering
     virtual json on_render_swml() const;
