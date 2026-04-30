@@ -355,13 +355,18 @@ def collect(raw_entries: list[dict], aliases: dict) -> tuple[dict, list]:
         out_modules[mod]["classes"].setdefault(name, {"methods": {}})
         out_modules[mod]["classes"][name]["methods"].update(methods_out)
 
-    # Mixin projection
+    # Mixin projection — methods may live on AgentBase OR SWMLService
+    # (Service is the parent class; many tool/auth/state helpers are
+    # declared on Service and inherited by AgentBase).
     ab_entry = out_modules.get("signalwire.core.agent_base", {}).get("classes", {}).get("AgentBase")
-    if ab_entry:
-        ab_methods = ab_entry["methods"]
+    svc_entry = out_modules.get("signalwire.core.swml_service", {}).get("classes", {}).get("SWMLService")
+    if ab_entry or svc_entry:
+        ab_methods = ab_entry["methods"] if ab_entry else {}
+        svc_methods = svc_entry["methods"] if svc_entry else {}
+        combined = {**svc_methods, **ab_methods}
         projected = set()
         for (target_mod, target_cls), expected in MIXIN_PROJECTIONS.items():
-            present = {m: ab_methods[m] for m in expected if m in ab_methods}
+            present = {m: combined[m] for m in expected if m in combined}
             if not present:
                 continue
             out_modules.setdefault(target_mod, {"classes": {}})
@@ -370,7 +375,7 @@ def collect(raw_entries: list[dict], aliases: dict) -> tuple[dict, list]:
             projected.update(present)
         for n in projected:
             ab_methods.pop(n, None)
-        if not ab_methods:
+        if ab_entry and not ab_methods:
             out_modules["signalwire.core.agent_base"]["classes"].pop("AgentBase", None)
             if not out_modules["signalwire.core.agent_base"]["classes"]:
                 out_modules.pop("signalwire.core.agent_base")

@@ -144,6 +144,29 @@ public:
     bool has_tool(const std::string& name) const;
     std::vector<std::string> list_tool_names() const;
 
+    // ========================================================================
+    // ToolRegistry parity (Python: signalwire.core.agent.tools.registry)
+    // ========================================================================
+
+    /// Whether a SWAIG function with the given name is registered.
+    /// Python parity: ``ToolRegistry.has_function``.
+    bool has_function(const std::string& name) const;
+
+    /// Get a registered SWAIG function definition by name.
+    /// Returns nullptr when no such function is registered.
+    /// Python parity: ``ToolRegistry.get_function``.
+    const swaig::ToolDefinition* get_function(const std::string& name) const;
+
+    /// Snapshot of all registered SWAIG functions keyed by name.
+    /// Returned by value so subsequent registrations don't mutate the
+    /// snapshot. Python parity: ``ToolRegistry.get_all_functions``.
+    std::map<std::string, swaig::ToolDefinition> get_all_functions() const;
+
+    /// Remove a registered SWAIG function. Returns true when the
+    /// function was found and removed; false when it wasn't registered.
+    /// Python parity: ``ToolRegistry.remove_function``.
+    bool remove_function(const std::string& name);
+
     /// Build the introspect payload for the registered tools as a JSON string
     /// shaped like `{"tools":[<each tool's SWAIG definition>]}`. Iterates
     /// `tool_order_` first, falling back to map order for entries registered

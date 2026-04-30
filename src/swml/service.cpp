@@ -270,6 +270,30 @@ std::vector<std::string> Service::list_tool_names() const {
     return tool_order_;
 }
 
+bool Service::has_function(const std::string& name) const {
+    return tools_.count(name) > 0;
+}
+
+const swaig::ToolDefinition* Service::get_function(const std::string& name) const {
+    auto it = tools_.find(name);
+    if (it == tools_.end()) return nullptr;
+    return &it->second;
+}
+
+std::map<std::string, swaig::ToolDefinition> Service::get_all_functions() const {
+    return tools_;
+}
+
+bool Service::remove_function(const std::string& name) {
+    auto it = tools_.find(name);
+    if (it == tools_.end()) return false;
+    tools_.erase(it);
+    tool_order_.erase(
+        std::remove(tool_order_.begin(), tool_order_.end(), name),
+        tool_order_.end());
+    return true;
+}
+
 std::string Service::build_tool_registry_json() const {
     // Build `{"tools":[...]}` capturing the runtime registry. Iterate
     // tool_order_ first (preserves registration order), then any

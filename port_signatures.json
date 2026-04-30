@@ -235,6 +235,43 @@
               ],
               "returns": "class:signalwire.core.agent_base.AgentBase"
             },
+            "get_all_functions": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "int"
+            },
+            "get_function": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "name",
+                  "type": "string",
+                  "required": true
+                }
+              ],
+              "returns": "class:signalwire.core.swaig_function.ToolDefinition"
+            },
+            "has_function": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "name",
+                  "type": "string",
+                  "required": true
+                }
+              ],
+              "returns": "bool"
+            },
             "register_swaig_function": {
               "params": [
                 {
@@ -248,6 +285,20 @@
                 }
               ],
               "returns": "class:signalwire.core.agent_base.AgentBase"
+            },
+            "remove_function": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "name",
+                  "type": "string",
+                  "required": true
+                }
+              ],
+              "returns": "bool"
             }
           }
         }
@@ -4498,6 +4549,29 @@
               ],
               "returns": "string"
             },
+            "get_all_functions": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "int"
+            },
+            "get_function": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "name",
+                  "type": "string",
+                  "required": true
+                }
+              ],
+              "returns": "class:signalwire.core.swaig_function.ToolDefinition"
+            },
             "goto_section": {
               "params": [
                 {
@@ -4527,6 +4601,20 @@
                 }
               ],
               "returns": "class:signalwire.service.Service"
+            },
+            "has_function": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "name",
+                  "type": "string",
+                  "required": true
+                }
+              ],
+              "returns": "bool"
             },
             "has_tool": {
               "params": [
@@ -4771,6 +4859,20 @@
                 }
               ],
               "returns": "class:signalwire.service.Service"
+            },
+            "remove_function": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "name",
+                  "type": "string",
+                  "required": true
+                }
+              ],
+              "returns": "bool"
             },
             "render_swml": {
               "params": [
