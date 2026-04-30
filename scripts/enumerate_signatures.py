@@ -432,6 +432,24 @@ def main() -> int:
     headers = sorted(args.include.rglob("*.hpp")) + sorted(args.include.rglob("*.h"))
     raw_entries: list[dict] = []
     parse_args = ["-x", "c++", "-std=c++17", f"-I{args.include}"]
+    # Project deps (e.g. nlohmann/json.hpp) live under deps/ at the SDK
+    # root.  Without -Ideps libclang resolves the bundled ``json``
+    # typedef to a fallback primitive (``int``), corrupting type
+    # extraction for set_param / set_global_data / set_prompt_pom etc.
+    deps_dir = PORT_ROOT / "deps"
+    if deps_dir.is_dir():
+        parse_args.append(f"-I{deps_dir}")
+    # libclang ships without the host stdlib headers; pull them in from
+    # the system gcc install if present so <cstddef> et al. resolve and
+    # nlohmann::json doesn't degrade to ``int``.
+    for gcc_inc in (
+        "/usr/lib/gcc/x86_64-linux-gnu/10/include",
+        "/usr/lib/gcc/x86_64-linux-gnu/12/include",
+        "/usr/lib/gcc/x86_64-linux-gnu/13/include",
+    ):
+        if Path(gcc_inc).is_dir():
+            parse_args.append(f"-I{gcc_inc}")
+            break
     for header in headers:
         try:
             tu = index.parse(str(header), args=parse_args, options=TranslationUnit.PARSE_DETAILED_PROCESSING_RECORD)

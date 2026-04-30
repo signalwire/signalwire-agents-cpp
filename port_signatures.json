@@ -22,7 +22,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             }
           }
         }
@@ -48,7 +48,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             }
           }
         }
@@ -74,7 +74,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             }
           }
         }
@@ -127,7 +127,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "list<string>"
             },
             "map_sip_username": {
               "params": [
@@ -217,6 +217,198 @@
         }
       }
     },
+    "signalwire.core.agent.prompt.manager": {
+      "classes": {
+        "PromptManager": {
+          "methods": {
+            "define_contexts": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "class:signalwire.core.contexts.ContextBuilder"
+            },
+            "get_contexts": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "optional<any>"
+            },
+            "get_post_prompt": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "optional<string>"
+            },
+            "get_prompt": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
+            },
+            "get_raw_prompt": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "optional<string>"
+            },
+            "prompt_add_section": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "title",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "body",
+                  "type": "string",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "bullets",
+                  "type": "list<string>",
+                  "required": false,
+                  "default": null
+                }
+              ],
+              "returns": "class:signalwire.core.agent_base.AgentBase"
+            },
+            "prompt_add_subsection": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "parent_title",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "title",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "body",
+                  "type": "string",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "bullets",
+                  "type": "list<string>",
+                  "required": false,
+                  "default": null
+                }
+              ],
+              "returns": "class:signalwire.core.agent_base.AgentBase"
+            },
+            "prompt_add_to_section": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "title",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "body",
+                  "type": "string",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "bullets",
+                  "type": "list<string>",
+                  "required": false,
+                  "default": null
+                }
+              ],
+              "returns": "class:signalwire.core.agent_base.AgentBase"
+            },
+            "prompt_has_section": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "title",
+                  "type": "string",
+                  "required": true
+                }
+              ],
+              "returns": "bool"
+            },
+            "set_post_prompt": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "text",
+                  "type": "string",
+                  "required": true
+                }
+              ],
+              "returns": "class:signalwire.core.agent_base.AgentBase"
+            },
+            "set_prompt_pom": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "pom",
+                  "type": "list<any>",
+                  "required": true
+                }
+              ],
+              "returns": "class:signalwire.core.agent_base.AgentBase"
+            },
+            "set_prompt_text": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "text",
+                  "type": "string",
+                  "required": true
+                }
+              ],
+              "returns": "class:signalwire.core.agent_base.AgentBase"
+            }
+          }
+        }
+      }
+    },
     "signalwire.core.agent.tools.registry": {
       "classes": {
         "ToolRegistry": {
@@ -242,7 +434,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "dict<string,class:signalwire.core.swaig_function.ToolDefinition>"
             },
             "get_function": {
               "params": [
@@ -280,7 +472,7 @@
                 },
                 {
                   "name": "func_def",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -335,7 +527,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -368,7 +560,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -387,7 +579,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -406,7 +598,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -471,7 +663,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "list<any>"
             },
             "clear_post_ai_verbs": {
               "params": [
@@ -543,24 +735,6 @@
               ],
               "returns": "class:signalwire.core.agent_base.AgentBase"
             },
-            "get_contexts": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "int"
-            },
-            "get_raw_prompt": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "optional<string>"
-            },
             "handle_mcp_request": {
               "params": [
                 {
@@ -569,11 +743,11 @@
                 },
                 {
                   "name": "body",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "has_contexts": {
               "params": [
@@ -600,7 +774,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "list<string>"
             },
             "mcp_servers": {
               "params": [
@@ -609,7 +783,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "list<any>"
             },
             "on_debug_event": {
               "params": [
@@ -646,7 +820,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "optional<list<any>>"
             },
             "register_sip_username": {
               "params": [
@@ -669,7 +843,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "render_swml_for_request": {
               "params": [
@@ -679,21 +853,21 @@
                 },
                 {
                   "name": "query_params",
-                  "type": "int",
+                  "type": "dict<string,string>",
                   "required": true
                 },
                 {
                   "name": "body_params",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 },
                 {
                   "name": "headers",
-                  "type": "int",
+                  "type": "dict<string,string>",
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "session_manager": {
               "params": [
@@ -765,20 +939,6 @@
               ],
               "returns": "class:signalwire.core.agent_base.AgentBase"
             },
-            "set_prompt_pom": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                },
-                {
-                  "name": "pom",
-                  "type": "int",
-                  "required": true
-                }
-              ],
-              "returns": "class:signalwire.core.agent_base.AgentBase"
-            },
             "set_use_pom": {
               "params": [
                 {
@@ -818,7 +978,7 @@
             },
             "supported_internal_filler_names": {
               "params": [],
-              "returns": "int"
+              "returns": "list<string>"
             }
           }
         }
@@ -850,7 +1010,7 @@
                 },
                 {
                   "name": "bullets",
-                  "type": "int",
+                  "type": "list<string>",
                   "required": true
                 }
               ],
@@ -869,7 +1029,7 @@
                 },
                 {
                   "name": "fillers",
-                  "type": "int",
+                  "type": "list<string>",
                   "required": true
                 }
               ],
@@ -888,7 +1048,7 @@
                 },
                 {
                   "name": "fillers",
-                  "type": "int",
+                  "type": "list<string>",
                   "required": true
                 }
               ],
@@ -932,7 +1092,7 @@
                 },
                 {
                   "name": "bullets",
-                  "type": "int",
+                  "type": "list<string>",
                   "required": false,
                   "default": null
                 },
@@ -944,13 +1104,13 @@
                 },
                 {
                   "name": "functions",
-                  "type": "int",
+                  "type": "optional<union<string,list<string>>>",
                   "required": false,
                   "default": null
                 },
                 {
                   "name": "valid_steps",
-                  "type": "int",
+                  "type": "list<string>",
                   "required": false,
                   "default": null
                 }
@@ -970,7 +1130,7 @@
                 },
                 {
                   "name": "bullets",
-                  "type": "int",
+                  "type": "list<string>",
                   "required": true
                 }
               ],
@@ -1091,7 +1251,7 @@
                 },
                 {
                   "name": "fillers",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -1105,7 +1265,7 @@
                 },
                 {
                   "name": "fillers",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -1217,7 +1377,7 @@
                 },
                 {
                   "name": "ctxs",
-                  "type": "int",
+                  "type": "list<string>",
                   "required": true
                 }
               ],
@@ -1231,7 +1391,7 @@
                 },
                 {
                   "name": "steps",
-                  "type": "int",
+                  "type": "list<string>",
                   "required": true
                 }
               ],
@@ -1244,7 +1404,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "list<string>"
             },
             "steps": {
               "params": [
@@ -1253,7 +1413,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "dict<string,class:signalwire.core.contexts.Step>"
             },
             "to_json": {
               "params": [
@@ -1262,7 +1422,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "valid_contexts": {
               "params": [
@@ -1271,7 +1431,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "optional<list<string>>"
             }
           }
         },
@@ -1299,20 +1459,6 @@
                 }
               ],
               "returns": "class:signalwire.core.contexts.Context"
-            },
-            "attach_tool_name_supplier": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                },
-                {
-                  "name": "supplier",
-                  "type": "int",
-                  "required": true
-                }
-              ],
-              "returns": "class:signalwire.core.contexts.ContextBuilder"
             },
             "get_context": {
               "params": [
@@ -1353,7 +1499,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "validate": {
               "params": [
@@ -1431,7 +1577,7 @@
                 },
                 {
                   "name": "functions",
-                  "type": "int",
+                  "type": "list<string>",
                   "required": false,
                   "default": null
                 }
@@ -1463,7 +1609,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "list<class:signalwire.core.contexts.GatherQuestion>"
             },
             "to_json": {
               "params": [
@@ -1472,7 +1618,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             }
           }
         },
@@ -1514,7 +1660,7 @@
                 },
                 {
                   "name": "functions",
-                  "type": "int",
+                  "type": "list<string>",
                   "required": false,
                   "default": null
                 }
@@ -1537,7 +1683,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             }
           }
         },
@@ -1565,7 +1711,7 @@
                 },
                 {
                   "name": "bullets",
-                  "type": "int",
+                  "type": "list<string>",
                   "required": true
                 }
               ],
@@ -1607,7 +1753,7 @@
                 },
                 {
                   "name": "functions",
-                  "type": "int",
+                  "type": "list<string>",
                   "required": false,
                   "default": null
                 }
@@ -1682,7 +1828,7 @@
                 },
                 {
                   "name": "functions",
-                  "type": "int",
+                  "type": "union<string,list<string>>",
                   "required": true
                 }
               ],
@@ -1835,7 +1981,7 @@
                 },
                 {
                   "name": "ctxs",
-                  "type": "int",
+                  "type": "list<string>",
                   "required": true
                 }
               ],
@@ -1849,7 +1995,7 @@
                 },
                 {
                   "name": "steps",
-                  "type": "int",
+                  "type": "list<string>",
                   "required": true
                 }
               ],
@@ -1862,7 +2008,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "valid_contexts": {
               "params": [
@@ -1871,7 +2017,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "optional<list<string>>"
             },
             "valid_steps": {
               "params": [
@@ -1880,7 +2026,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "optional<list<string>>"
             }
           }
         }
@@ -1912,7 +2058,7 @@
                 },
                 {
                   "name": "data",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -1940,7 +2086,7 @@
                 },
                 {
                   "name": "keys",
-                  "type": "int",
+                  "type": "list<string>",
                   "required": true
                 }
               ],
@@ -1998,7 +2144,7 @@
                 },
                 {
                   "name": "foreach_config",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -2012,7 +2158,7 @@
                 },
                 {
                   "name": "keys",
-                  "type": "int",
+                  "type": "list<string>",
                   "required": true
                 }
               ],
@@ -2061,7 +2207,7 @@
                 },
                 {
                   "name": "enum_values",
-                  "type": "int",
+                  "type": "list<string>",
                   "required": false,
                   "default": null
                 }
@@ -2076,7 +2222,7 @@
                 },
                 {
                   "name": "data",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -2103,7 +2249,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "webhook": {
               "params": [
@@ -2123,7 +2269,7 @@
                 },
                 {
                   "name": "headers",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 },
@@ -2141,7 +2287,7 @@
                 },
                 {
                   "name": "require_args",
-                  "type": "int",
+                  "type": "list<string>",
                   "required": false,
                   "default": null
                 }
@@ -2156,7 +2302,7 @@
                 },
                 {
                   "name": "expressions",
-                  "type": "int",
+                  "type": "list<any>",
                   "required": true
                 }
               ],
@@ -2204,7 +2350,7 @@
                 },
                 {
                   "name": "data",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -2218,7 +2364,7 @@
                 },
                 {
                   "name": "actions",
-                  "type": "int",
+                  "type": "list<any>",
                   "required": true
                 }
               ],
@@ -2232,7 +2378,7 @@
                 },
                 {
                   "name": "hints",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -2286,7 +2432,7 @@
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "create_payment_parameter": {
               "params": [
@@ -2301,7 +2447,7 @@
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "create_payment_prompt": {
               "params": [
@@ -2312,7 +2458,7 @@
                 },
                 {
                   "name": "actions",
-                  "type": "int",
+                  "type": "list<any>",
                   "required": true
                 },
                 {
@@ -2328,7 +2474,7 @@
                   "default": null
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "enable_extensive_data": {
               "params": [
@@ -2373,7 +2519,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 },
@@ -2400,7 +2546,7 @@
                 },
                 {
                   "name": "swml_content",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 },
                 {
@@ -2579,13 +2725,13 @@
                 },
                 {
                   "name": "parameters",
-                  "type": "int",
+                  "type": "list<any>",
                   "required": false,
                   "default": null
                 },
                 {
                   "name": "prompts",
-                  "type": "int",
+                  "type": "list<any>",
                   "required": false,
                   "default": null
                 },
@@ -2701,7 +2847,7 @@
                 },
                 {
                   "name": "keys",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -2715,7 +2861,7 @@
                 },
                 {
                   "name": "keys",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -2729,7 +2875,7 @@
                 },
                 {
                   "name": "text",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -2842,13 +2988,13 @@
                 },
                 {
                   "name": "media",
-                  "type": "int",
+                  "type": "list<string>",
                   "required": false,
                   "default": null
                 },
                 {
                   "name": "tags",
-                  "type": "int",
+                  "type": "list<string>",
                   "required": false,
                   "default": null
                 },
@@ -2883,7 +3029,7 @@
                 },
                 {
                   "name": "data",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -3101,7 +3247,7 @@
                 },
                 {
                   "name": "event_data",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -3158,7 +3304,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "to_string": {
               "params": [
@@ -3183,7 +3329,7 @@
                 },
                 {
                   "name": "function_toggles",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -3197,7 +3343,7 @@
                 },
                 {
                   "name": "data",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -3211,7 +3357,7 @@
                 },
                 {
                   "name": "settings",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -3260,7 +3406,7 @@
                 },
                 {
                   "name": "include",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -3288,7 +3434,7 @@
                 },
                 {
                   "name": "hints",
-                  "type": "int",
+                  "type": "list<string>",
                   "required": true
                 }
               ],
@@ -3307,7 +3453,7 @@
                 },
                 {
                   "name": "fillers",
-                  "type": "int",
+                  "type": "list<string>",
                   "required": true
                 }
               ],
@@ -3340,7 +3486,7 @@
                 },
                 {
                   "name": "headers",
-                  "type": "int",
+                  "type": "dict<string,string>",
                   "required": false,
                   "default": null
                 },
@@ -3352,7 +3498,7 @@
                 },
                 {
                   "name": "resource_vars",
-                  "type": "int",
+                  "type": "dict<string,string>",
                   "required": false,
                   "default": null
                 }
@@ -3436,7 +3582,7 @@
                 },
                 {
                   "name": "includes",
-                  "type": "int",
+                  "type": "list<any>",
                   "required": true
                 }
               ],
@@ -3450,7 +3596,7 @@
                 },
                 {
                   "name": "data",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -3464,7 +3610,7 @@
                 },
                 {
                   "name": "fillers",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -3478,7 +3624,7 @@
                 },
                 {
                   "name": "langs",
-                  "type": "int",
+                  "type": "list<class:signalwire.language_config.LanguageConfig>",
                   "required": true
                 }
               ],
@@ -3492,7 +3638,7 @@
                 },
                 {
                   "name": "funcs",
-                  "type": "int",
+                  "type": "list<string>",
                   "required": true
                 }
               ],
@@ -3511,7 +3657,7 @@
                 },
                 {
                   "name": "value",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -3525,7 +3671,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -3539,7 +3685,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -3553,7 +3699,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -3567,7 +3713,7 @@
                 },
                 {
                   "name": "pronuns",
-                  "type": "int",
+                  "type": "list<class:signalwire.pronunciation.Pronunciation>",
                   "required": true
                 }
               ],
@@ -3581,7 +3727,7 @@
                 },
                 {
                   "name": "data",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -3677,7 +3823,7 @@
                 },
                 {
                   "name": "bullets",
-                  "type": "int",
+                  "type": "list<string>",
                   "required": false,
                   "default": null
                 }
@@ -3708,7 +3854,7 @@
                 },
                 {
                   "name": "bullets",
-                  "type": "int",
+                  "type": "list<string>",
                   "required": false,
                   "default": null
                 }
@@ -3734,7 +3880,7 @@
                 },
                 {
                   "name": "bullets",
-                  "type": "int",
+                  "type": "list<string>",
                   "required": false,
                   "default": null
                 }
@@ -3813,7 +3959,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -3841,7 +3987,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "list<string>"
             },
             "remove_skill": {
               "params": [
@@ -3924,12 +4070,12 @@
                 },
                 {
                   "name": "args",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 },
                 {
                   "name": "raw_data",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -3943,7 +4089,7 @@
                 },
                 {
                   "name": "func_def",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -3985,6 +4131,48 @@
                 }
               ],
               "returns": "class:signalwire.core.agent_base.AgentBase"
+            },
+            "on_request": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "request_data",
+                  "type": "optional<any>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "callback_path",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                }
+              ],
+              "returns": "optional<any>"
+            },
+            "on_swml_request": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "request_data",
+                  "type": "optional<any>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "callback_path",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                }
+              ],
+              "returns": "optional<any>"
             },
             "run": {
               "params": [
@@ -4143,7 +4331,7 @@
                 },
                 {
                   "name": "parameters",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 },
                 {
@@ -4167,7 +4355,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "list<any>"
             },
             "get_global_data": {
               "params": [
@@ -4176,7 +4364,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "get_hints": {
               "params": [
@@ -4185,7 +4373,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "list<string>"
             },
             "get_instance_key": {
               "params": [
@@ -4204,7 +4392,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 },
                 {
@@ -4233,7 +4421,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "get_prompt_sections": {
               "params": [
@@ -4242,7 +4430,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "list<class:signalwire.skill_prompt_section.SkillPromptSection>"
             },
             "register_tools": {
               "params": [
@@ -4251,7 +4439,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "list<class:signalwire.core.swaig_function.ToolDefinition>"
             },
             "required_env_vars": {
               "params": [
@@ -4260,7 +4448,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "list<string>"
             },
             "required_packages": {
               "params": [
@@ -4269,7 +4457,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "list<string>"
             },
             "setup": {
               "params": [
@@ -4279,7 +4467,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -4368,7 +4556,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "list<string>"
             },
             "load_skill": {
               "params": [
@@ -4383,7 +4571,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 },
                 {
@@ -4438,7 +4626,7 @@
                   "default": null
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             }
           }
         }
@@ -4475,7 +4663,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -4489,7 +4677,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -4504,7 +4692,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -4519,7 +4707,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -4561,7 +4749,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -4576,7 +4764,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -4605,7 +4793,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -4620,7 +4808,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -4644,7 +4832,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -4659,7 +4847,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -4676,16 +4864,6 @@
               ],
               "returns": "string"
             },
-            "generate_random_hex": {
-              "params": [
-                {
-                  "name": "bytes",
-                  "type": "int",
-                  "required": true
-                }
-              ],
-              "returns": "string"
-            },
             "get_all_functions": {
               "params": [
                 {
@@ -4693,7 +4871,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "dict<string,class:signalwire.core.swaig_function.ToolDefinition>"
             },
             "get_basic_auth_credentials": {
               "params": [
@@ -4735,7 +4913,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -4750,7 +4928,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -4793,7 +4971,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -4808,7 +4986,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -4823,7 +5001,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -4837,7 +5015,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "list<string>"
             },
             "live_transcribe": {
               "params": [
@@ -4847,7 +5025,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -4862,7 +5040,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -4891,16 +5069,58 @@
                 },
                 {
                   "name": "args",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 },
                 {
                   "name": "raw_data",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
               "returns": "class:signalwire.core.function_result.FunctionResult"
+            },
+            "on_request": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "request_data",
+                  "type": "optional<any>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "callback_path",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                }
+              ],
+              "returns": "optional<any>"
+            },
+            "on_swml_request": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "request_data",
+                  "type": "optional<any>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "callback_path",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                }
+              ],
+              "returns": "optional<any>"
             },
             "pay": {
               "params": [
@@ -4910,7 +5130,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -4925,7 +5145,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -4949,7 +5169,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -4964,7 +5184,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -4979,7 +5199,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -4994,7 +5214,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -5009,7 +5229,7 @@
                 },
                 {
                   "name": "func_def",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -5036,7 +5256,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "request": {
               "params": [
@@ -5046,7 +5266,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -5061,7 +5281,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -5085,7 +5305,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -5100,7 +5320,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -5115,7 +5335,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -5139,7 +5359,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -5229,7 +5449,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -5267,7 +5487,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -5282,7 +5502,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -5297,7 +5517,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -5312,7 +5532,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -5327,7 +5547,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -5357,7 +5577,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -5372,7 +5592,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -5387,7 +5607,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -5686,7 +5906,7 @@
                 },
                 {
                   "name": "amenities",
-                  "type": "int",
+                  "type": "list<any>",
                   "required": true
                 }
               ],
@@ -5700,7 +5920,7 @@
                 },
                 {
                   "name": "hours",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -5769,7 +5989,7 @@
                 },
                 {
                   "name": "faqs",
-                  "type": "int",
+                  "type": "list<any>",
                   "required": true
                 }
               ],
@@ -5880,7 +6100,7 @@
                 },
                 {
                   "name": "questions",
-                  "type": "int",
+                  "type": "list<any>",
                   "required": true
                 }
               ],
@@ -5935,7 +6155,7 @@
                 },
                 {
                   "name": "departments",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -6046,7 +6266,7 @@
                 },
                 {
                   "name": "questions",
-                  "type": "int",
+                  "type": "list<any>",
                   "required": true
                 }
               ],
@@ -6142,7 +6362,7 @@
                 },
                 {
                   "name": "result",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -6156,7 +6376,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "resume": {
               "params": [
@@ -6198,7 +6418,7 @@
                 },
                 {
                   "name": "result",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -6245,7 +6465,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -6277,7 +6497,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -6291,7 +6511,7 @@
                 },
                 {
                   "name": "devices",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -6305,7 +6525,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -6351,7 +6571,7 @@
                 },
                 {
                   "name": "swml",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -6435,7 +6655,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -6464,7 +6684,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -6479,7 +6699,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -6517,7 +6737,7 @@
                 },
                 {
                   "name": "media",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 },
                 {
@@ -6537,12 +6757,12 @@
                 },
                 {
                   "name": "play_media",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 },
                 {
                   "name": "collect_params",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -6565,7 +6785,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -6580,7 +6800,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
@@ -6779,7 +6999,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -6802,7 +7022,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -6936,7 +7156,7 @@
                 },
                 {
                   "name": "devices",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -6964,11 +7184,11 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "find_call": {
               "params": [
@@ -7099,13 +7319,13 @@
                 },
                 {
                   "name": "media",
-                  "type": "int",
+                  "type": "list<string>",
                   "required": false,
                   "default": null
                 },
                 {
                   "name": "tags",
-                  "type": "int",
+                  "type": "list<string>",
                   "required": false,
                   "default": null
                 },
@@ -7131,11 +7351,11 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "subscribe": {
               "params": [
@@ -7145,7 +7365,7 @@
                 },
                 {
                   "name": "contexts",
-                  "type": "int",
+                  "type": "list<string>",
                   "required": true
                 }
               ],
@@ -7173,7 +7393,7 @@
                 },
                 {
                   "name": "contexts",
-                  "type": "int",
+                  "type": "list<string>",
                   "required": true
                 }
               ],
@@ -7254,7 +7474,7 @@
               "params": [
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -7378,7 +7598,7 @@
               "params": [
                 {
                   "name": "j",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -7561,11 +7781,11 @@
                 },
                 {
                   "name": "data",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "del": {
               "params": [
@@ -7579,7 +7799,7 @@
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "get": {
               "params": [
@@ -7593,7 +7813,7 @@
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "list": {
               "params": [
@@ -7603,12 +7823,12 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "dict<string,string>",
                   "required": false,
                   "default": null
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "update": {
               "params": [
@@ -7623,11 +7843,11 @@
                 },
                 {
                   "name": "data",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             }
           }
         },
@@ -7678,7 +7898,7 @@
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "get": {
               "params": [
@@ -7693,12 +7913,12 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "dict<string,string>",
                   "required": false,
                   "default": null
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "patch": {
               "params": [
@@ -7713,12 +7933,12 @@
                 },
                 {
                   "name": "body",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "post": {
               "params": [
@@ -7733,12 +7953,12 @@
                 },
                 {
                   "name": "body",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "put": {
               "params": [
@@ -7753,12 +7973,12 @@
                 },
                 {
                   "name": "body",
-                  "type": "int",
+                  "type": "any",
                   "required": false,
                   "default": null
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "set_header": {
               "params": [
@@ -8159,7 +8379,7 @@
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "collect": {
               "params": [
@@ -8174,11 +8394,11 @@
                 },
                 {
                   "name": "data",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "connect": {
               "params": [
@@ -8193,11 +8413,11 @@
                 },
                 {
                   "name": "data",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "detect": {
               "params": [
@@ -8212,11 +8432,11 @@
                 },
                 {
                   "name": "data",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "dial": {
               "params": [
@@ -8226,11 +8446,11 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "end_call": {
               "params": [
@@ -8244,7 +8464,7 @@
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "get_call": {
               "params": [
@@ -8258,7 +8478,7 @@
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "hangup": {
               "params": [
@@ -8272,7 +8492,7 @@
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "hold": {
               "params": [
@@ -8286,7 +8506,7 @@
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "list_calls": {
               "params": [
@@ -8296,12 +8516,12 @@
                 },
                 {
                   "name": "p",
-                  "type": "int",
+                  "type": "dict<string,string>",
                   "required": false,
                   "default": null
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "play": {
               "params": [
@@ -8316,11 +8536,11 @@
                 },
                 {
                   "name": "data",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "record": {
               "params": [
@@ -8335,11 +8555,11 @@
                 },
                 {
                   "name": "data",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "send_digits": {
               "params": [
@@ -8354,11 +8574,11 @@
                 },
                 {
                   "name": "data",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "tap": {
               "params": [
@@ -8373,11 +8593,11 @@
                 },
                 {
                   "name": "data",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "transfer": {
               "params": [
@@ -8392,11 +8612,11 @@
                 },
                 {
                   "name": "data",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "unhold": {
               "params": [
@@ -8410,7 +8630,7 @@
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "update_call": {
               "params": [
@@ -8425,11 +8645,11 @@
                 },
                 {
                   "name": "data",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             }
           }
         }
@@ -8461,12 +8681,12 @@
                 },
                 {
                   "name": "p",
-                  "type": "int",
+                  "type": "dict<string,string>",
                   "required": false,
                   "default": null
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "send_message": {
               "params": [
@@ -8476,11 +8696,11 @@
                 },
                 {
                   "name": "data",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             }
           }
         }
@@ -8512,11 +8732,11 @@
                 },
                 {
                   "name": "data",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "list_calls": {
               "params": [
@@ -8526,12 +8746,12 @@
                 },
                 {
                   "name": "p",
-                  "type": "int",
+                  "type": "dict<string,string>",
                   "required": false,
                   "default": null
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "list_messages": {
               "params": [
@@ -8541,12 +8761,12 @@
                 },
                 {
                   "name": "p",
-                  "type": "int",
+                  "type": "dict<string,string>",
                   "required": false,
                   "default": null
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "send_message": {
               "params": [
@@ -8556,11 +8776,11 @@
                 },
                 {
                   "name": "data",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             }
           }
         }
@@ -8592,11 +8812,11 @@
                 },
                 {
                   "name": "data",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             }
           }
         }
@@ -8698,7 +8918,7 @@
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             }
           }
         }
@@ -8730,11 +8950,11 @@
                 },
                 {
                   "name": "data",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "verify_code": {
               "params": [
@@ -8744,11 +8964,11 @@
                 },
                 {
                   "name": "data",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             }
           }
         }
@@ -8802,11 +9022,11 @@
                 },
                 {
                   "name": "data",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "make_ai_agent_body": {
               "params": [
@@ -8816,7 +9036,7 @@
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "make_call_flow_body": {
               "params": [
@@ -8832,7 +9052,7 @@
                   "default": null
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "make_cxml_application_body": {
               "params": [
@@ -8842,7 +9062,7 @@
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "make_cxml_webhook_body": {
               "params": [
@@ -8858,7 +9078,7 @@
                   "default": null
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "make_relay_application_body": {
               "params": [
@@ -8868,7 +9088,7 @@
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "make_relay_topic_body": {
               "params": [
@@ -8884,7 +9104,7 @@
                   "default": null
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "make_swml_webhook_body": {
               "params": [
@@ -8894,7 +9114,7 @@
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "release": {
               "params": [
@@ -8908,7 +9128,7 @@
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "search": {
               "params": [
@@ -8918,11 +9138,11 @@
                 },
                 {
                   "name": "p",
-                  "type": "int",
+                  "type": "dict<string,string>",
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "set_ai_agent": {
               "params": [
@@ -8941,7 +9161,7 @@
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "set_call_flow": {
               "params": [
@@ -8966,7 +9186,7 @@
                   "default": null
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "set_cxml_application": {
               "params": [
@@ -8985,7 +9205,7 @@
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "set_cxml_webhook": {
               "params": [
@@ -9010,7 +9230,7 @@
                   "default": null
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "set_relay_application": {
               "params": [
@@ -9029,7 +9249,7 @@
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "set_relay_topic": {
               "params": [
@@ -9054,7 +9274,7 @@
                   "default": null
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "set_swml_webhook": {
               "params": [
@@ -9073,7 +9293,7 @@
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             }
           }
         }
@@ -9104,7 +9324,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "update_project": {
               "params": [
@@ -9114,11 +9334,11 @@
                 },
                 {
                   "name": "data",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             }
           }
         }
@@ -9150,11 +9370,11 @@
                 },
                 {
                   "name": "data",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             }
           }
         }
@@ -9339,7 +9559,7 @@
                   "required": true
                 }
               ],
-              "returns": "int"
+              "returns": "class:signalwire.core.skill_base.SkillBase"
             },
             "has_skill": {
               "params": [
@@ -9366,7 +9586,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "list<string>"
             },
             "register_skill": {
               "params": [
@@ -9381,7 +9601,7 @@
                 },
                 {
                   "name": "factory",
-                  "type": "int",
+                  "type": "class:signalwire.skill_factory.SkillFactory",
                   "required": true
                 }
               ],
@@ -9417,7 +9637,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -9441,7 +9661,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "int",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -9505,7 +9725,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "to_string": {
               "params": [
@@ -9597,7 +9817,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             },
             "verb_definitions": {
               "params": [
@@ -9606,7 +9826,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "list<class:signalwire.verb_definition.VerbDefinition>"
             },
             "verb_names": {
               "params": [
@@ -9615,7 +9835,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "list<string>"
             }
           }
         }
@@ -9655,7 +9875,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             }
           }
         }
@@ -9681,7 +9901,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "any"
             }
           }
         }
