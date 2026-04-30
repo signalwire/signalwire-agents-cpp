@@ -76,6 +76,32 @@ bool Service::timing_safe_compare(const std::string& a, const std::string& b) {
     return CRYPTO_memcmp(a.data(), b.data(), a.size()) == 0;
 }
 
+bool Service::validate_basic_auth(const std::string& username, const std::string& password) const {
+    return timing_safe_compare(username, auth_user_)
+        && timing_safe_compare(password, auth_pass_);
+}
+
+std::pair<std::string, std::string> Service::get_basic_auth_credentials() const {
+    return {auth_user_, auth_pass_};
+}
+
+std::tuple<std::string, std::string, std::string>
+Service::get_basic_auth_credentials_with_source() const {
+    const char* env_user = std::getenv("SWML_BASIC_AUTH_USER");
+    const char* env_pass = std::getenv("SWML_BASIC_AUTH_PASSWORD");
+    std::string source;
+    if (env_user && env_pass && std::string(env_user) == auth_user_
+        && std::string(env_pass) == auth_pass_
+        && !auth_user_.empty() && !auth_pass_.empty()) {
+        source = "environment";
+    } else if (auth_user_.rfind("user_", 0) == 0 && auth_pass_.size() > 20) {
+        source = "generated";
+    } else {
+        source = "provided";
+    }
+    return std::make_tuple(auth_user_, auth_pass_, source);
+}
+
 std::string Service::generate_random_hex(size_t bytes) {
     std::vector<unsigned char> buf(bytes);
     if (RAND_bytes(buf.data(), static_cast<int>(bytes)) != 1) {

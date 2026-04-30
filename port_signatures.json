@@ -3531,6 +3531,42 @@
         }
       }
     },
+    "signalwire.core.mixins.auth_mixin": {
+      "classes": {
+        "AuthMixin": {
+          "methods": {
+            "get_basic_auth_credentials": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "tuple<string,string>"
+            },
+            "validate_basic_auth": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "username",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "password",
+                  "type": "string",
+                  "required": true
+                }
+              ],
+              "returns": "bool"
+            }
+          }
+        }
+      }
+    },
     "signalwire.core.mixins.prompt_mixin": {
       "classes": {
         "PromptMixin": {
@@ -4558,6 +4594,24 @@
               ],
               "returns": "int"
             },
+            "get_basic_auth_credentials": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "tuple<string,string>"
+            },
+            "get_basic_auth_credentials_with_source": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "tuple<string,string,string>"
+            },
             "get_function": {
               "params": [
                 {
@@ -5238,6 +5292,25 @@
                 }
               ],
               "returns": "class:signalwire.service.Service"
+            },
+            "validate_basic_auth": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "username",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "password",
+                  "type": "string",
+                  "required": true
+                }
+              ],
+              "returns": "bool"
             }
           }
         }

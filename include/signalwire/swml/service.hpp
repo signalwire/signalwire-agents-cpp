@@ -62,6 +62,25 @@ public:
     const std::string& auth_password() const { return auth_pass_; }
 
     // ========================================================================
+    // AuthMixin parity (Python: signalwire.core.mixins.auth_mixin)
+    // ========================================================================
+
+    /// Validate provided basic-auth credentials against the configured ones
+    /// using a constant-time comparison.
+    /// Python parity: ``AuthMixin.validate_basic_auth(username, password)``.
+    bool validate_basic_auth(const std::string& username, const std::string& password) const;
+
+    /// Get (user, password) — Python-canonical name.
+    /// Python parity: ``AuthMixin.get_basic_auth_credentials``.
+    std::pair<std::string, std::string> get_basic_auth_credentials() const;
+
+    /// Get (user, password, source) where source is one of "provided",
+    /// "environment", or "generated". Python parity:
+    /// ``AuthMixin.get_basic_auth_credentials(include_source=True)``.
+    std::tuple<std::string, std::string, std::string>
+        get_basic_auth_credentials_with_source() const;
+
+    // ========================================================================
     // All 38 SWML Verb Methods
     // ========================================================================
 

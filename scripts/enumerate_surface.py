@@ -285,6 +285,9 @@ MIXIN_PROJECTIONS: dict[tuple[str, str], list[str]] = {
         "has_function", "get_function", "get_all_functions",
         "remove_function",
     ],
+    ("signalwire.core.mixins.auth_mixin", "AuthMixin"): [
+        "validate_basic_auth", "get_basic_auth_credentials",
+    ],
     ("signalwire.core.mixins.web_mixin", "WebMixin"): [
         "enable_debug_routes", "manual_set_proxy_url", "run", "serve",
         "set_dynamic_config_callback",
