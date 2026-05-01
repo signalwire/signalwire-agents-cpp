@@ -49,23 +49,42 @@ public:
     // Call control methods
     Action answer();
     Action hangup(const std::string& reason = "hangup");
-    Action play(const json& media, double volume = 0.0);
-    Action record(const json& params = json::object());
+    Action play(const json& media, double volume = 0.0,
+                const std::string& control_id = "");
+    Action record(const json& params = json::object(),
+                  const std::string& control_id = "");
     Action record_call(const json& params = json::object());
-    Action prompt(const json& play_media, const json& collect_params);
-    Action collect(const json& params);
+    Action prompt(const json& play_media, const json& collect_params,
+                  const std::string& control_id = "");
+    Action play_and_collect(const json& play_media, const json& collect_params,
+                            const std::string& control_id = "");
+    Action collect(const json& params,
+                   const std::string& control_id = "");
     Action connect(const json& devices);
     Action disconnect();
-    Action detect(const json& params);
-    Action tap_audio(const json& params);
+    Action detect(const json& params,
+                  const std::string& control_id = "");
+    Action tap_audio(const json& params,
+                     const std::string& control_id = "");
+    Action tap(const json& params,
+               const std::string& control_id = "");
     Action stop_tap(const std::string& control_id);
     Action send_digits(const std::string& digits);
     Action transfer(const json& params);
     Action live_transcribe(const json& params = json::object());
+    Action transcribe(const json& params = json::object(),
+                      const std::string& control_id = "");
     Action live_translate(const json& params = json::object());
-    Action ai(const json& params);
-    Action send_fax(const std::string& document_url, const std::string& header = "");
-    Action receive_fax();
+    Action ai(const json& params,
+              const std::string& control_id = "");
+    Action pay(const json& params,
+               const std::string& control_id = "");
+    Action send_fax(const std::string& document_url, const std::string& header = "",
+                    const std::string& identity = "",
+                    const std::string& control_id = "");
+    Action receive_fax(const std::string& control_id = "");
+    Action stream(const json& params,
+                  const std::string& control_id = "");
     Action hold();
     Action unhold();
     Action sip_refer(const std::string& to_uri);

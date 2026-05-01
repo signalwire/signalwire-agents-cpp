@@ -6,7 +6,7 @@ using json = nlohmann::json;
 TEST(relay_msg_default_state) {
     Message msg;
     ASSERT_EQ(msg.message_id, "");
-    ASSERT_EQ(msg.state, "");
+    ASSERT_EQ(msg.state(), "");
     ASSERT_FALSE(msg.is_delivered());
     ASSERT_FALSE(msg.is_failed());
     ASSERT_FALSE(msg.is_terminal());
@@ -25,7 +25,7 @@ TEST(relay_msg_from_params_full) {
     p["tags"] = json::array({"vip"});
     auto msg = Message::from_params(p);
     ASSERT_EQ(msg.message_id, "m-1");
-    ASSERT_EQ(msg.state, "queued");
+    ASSERT_EQ(msg.state(), "queued");
     ASSERT_EQ(msg.from, "+15551111111");
     ASSERT_EQ(msg.body, "Hello!");
     ASSERT_EQ(msg.media.size(), static_cast<size_t>(2));
@@ -38,13 +38,13 @@ TEST(relay_msg_from_params_state_fallback) {
     p["message_id"] = "m-2";
     p["state"] = "sent";
     auto msg = Message::from_params(p);
-    ASSERT_EQ(msg.state, "sent");
+    ASSERT_EQ(msg.state(), "sent");
     return true;
 }
 
 TEST(relay_msg_lifecycle_queued_to_delivered) {
     Message msg;
-    msg.state = "queued";
+    msg.set_state("queued");
     ASSERT_FALSE(msg.is_terminal());
 
     msg.update_state("initiated");
@@ -106,7 +106,7 @@ TEST(relay_msg_wait_already_terminal) {
 
 TEST(relay_msg_wait_timeout) {
     Message msg;
-    msg.state = "queued";
+    msg.set_state("queued");
     ASSERT_FALSE(msg.wait(50));
     return true;
 }

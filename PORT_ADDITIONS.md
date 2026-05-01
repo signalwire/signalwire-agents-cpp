@@ -513,3 +513,25 @@ signalwire.rest.namespaces.fabric.FabricResource.list_addresses: cpp_only: share
 signalwire.rest.namespaces.fabric.FabricResourcePUT: cpp_only: shared C++ base that overrides update with PUT (Python uses _update_method = "PUT" on subclasses).
 signalwire.rest.namespaces.fabric.FabricResourcePUT.update: cpp_only: PUT-update override on the C++ base for fabric resources whose Python equivalents set _update_method = "PUT".
 signalwire.rest._pagination.PaginatedIterator.has_next: cpp_only: explicit "is more available?" predicate; Python exposes the same logic through __next__ raising StopIteration. C++ provides has_next so callers can drive a while-loop without exception-handling.
+
+# Mock-relay test harness extensions (added with mock-relay tests).
+signalwire.relay.action.Action.method_prefix: cpp_unified_action: C++ Action collapses Python's per-verb subclasses (PlayAction/RecordAction/CollectAction/...) into a single class plumbing the verb name through method_prefix. Used internally to route stop/pause/resume/volume frames under "calling.<verb>.<op>".
+signalwire.relay.action.Action.set_method_prefix: cpp_unified_action: setter for the per-verb prefix; see method_prefix.
+signalwire.relay.action.Action.event_type_filter: cpp_unified_action: which signalwire.event types this Action accepts state updates from. Used by play_and_collect / collect to reject calling.call.play(finished) — Python achieves the same via subclass-specific terminal-event-type sets.
+signalwire.relay.action.Action.set_event_type_filter: cpp_unified_action: setter for event_type_filter.
+signalwire.relay.action.Action.event_type_matches: cpp_unified_action: filter predicate over event_type_filter.
+signalwire.relay.action.Action.resolve_on_detect: cpp_unified_action: detect actions resolve on the first event carrying a `detect` payload. Python's DetectAction has the same logic baked into its terminal-event handler.
+signalwire.relay.action.Action.set_resolve_on_detect: cpp_unified_action: setter.
+signalwire.relay.action.Action.resolve_on_result: cpp_unified_action: collect actions resolve on the first event carrying a `result` payload (digits/speech). Python's CollectAction has the same logic.
+signalwire.relay.action.Action.set_resolve_on_result: cpp_unified_action: setter.
+signalwire.relay.action.Action.start_input_timers: cpp_unified_action: collect-only sub-command (calling.collect.start_input_timers). Python exposes this on StandaloneCollectAction.
+signalwire.relay.action.Action.volume: cpp_unified_action: play-only sub-command (calling.play.volume). Python exposes this on PlayAction.
+signalwire.relay.message.Message.state: cpp_accessor: read access to the shared state field (replaces a public field with an accessor so returned-by-value Message copies see updates the registry-owned instance applies). Python uses an instance attribute directly.
+signalwire.relay.message.Message.set_state: cpp_accessor: write access — see state().
+signalwire.relay.message.Message.reason: cpp_accessor: failure reason populated by undelivered/failed events. Python attaches reason as an attribute on the Message instance.
+signalwire.relay.message.Message.set_reason: cpp_accessor: setter for reason.
+signalwire.relay.call.Call.tap: cpp_naming: alias for tap_audio (the Python signalwire.relay.call.Call exposes both `tap` as the verb name and `tap_audio` as the method); C++ now provides tap as the canonical name with tap_audio kept as a backward-compatible alias.
+signalwire.relay.call.Call.transcribe: cpp_naming: alias for live_transcribe used by the mock-backed tests; the Python SDK has TranscribeAction returning from call.transcribe.
+signalwire.relay.call.Call.stream: cpp_unified_action: calling.stream verb — Python returns StreamAction; C++ exposes via the unified Action.
+signalwire.relay.call.Call.play_and_collect: cpp_naming: alias for prompt(play_media, collect_params) — Python uses `play_and_collect` as the verb name on the wire and on the Call method (call.play_and_collect). C++ keeps prompt as the documented method; play_and_collect is the alias used by mock-backed tests.
+signalwire.relay.call.Call.pay: cpp_unified_action: calling.pay verb — Python returns PayAction; C++ via the unified Action.

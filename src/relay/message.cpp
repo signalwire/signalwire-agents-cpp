@@ -7,13 +7,28 @@
 namespace signalwire {
 namespace relay {
 
-Message::Message()
-    : sync_(std::make_shared<SyncState>()) {}
+Message::Message() : sync_(std::make_shared<SyncState>()) {}
+
+const std::string& Message::state() const {
+    return sync_->state;
+}
+
+const std::string& Message::reason() const {
+    return sync_->reason;
+}
+
+void Message::set_state(const std::string& s) {
+    sync_->state = s;
+}
+
+void Message::set_reason(const std::string& r) {
+    sync_->reason = r;
+}
 
 Message Message::from_params(const json& params) {
     Message msg;
     msg.message_id = params.value("message_id", "");
-    msg.state = params.value("message_state", params.value("state", ""));
+    msg.set_state(params.value("message_state", params.value("state", "")));
     msg.from = params.value("from_number", "");
     msg.to = params.value("to_number", "");
     msg.body = params.value("body", "");
@@ -33,23 +48,26 @@ Message Message::from_params(const json& params) {
 }
 
 void Message::update_state(const std::string& new_state) {
-    state = new_state;
-    if (is_terminal()) {
-        CompletedCallback cb;
-        {
-            std::lock_guard<std::mutex> lock(sync_->mutex);
+    CompletedCallback cb;
+    bool fire_terminal = false;
+    {
+        std::lock_guard<std::mutex> lock(sync_->mutex);
+        sync_->state = new_state;
+        if (new_state == "delivered" || new_state == "failed" ||
+            new_state == "undelivered") {
             sync_->completed = true;
+            fire_terminal = true;
             sync_->cv.notify_all();
             cb = sync_->callback;
         }
-        if (cb) {
-            try {
-                cb(*this);
-            } catch (const std::exception& e) {
-                get_logger().error(std::string("Message callback error: ") + e.what());
-            } catch (...) {
-                get_logger().error("Message callback threw unknown exception");
-            }
+    }
+    if (fire_terminal && cb) {
+        try {
+            cb(*this);
+        } catch (const std::exception& e) {
+            get_logger().error(std::string("Message callback error: ") + e.what());
+        } catch (...) {
+            get_logger().error("Message callback threw unknown exception");
         }
     }
 }

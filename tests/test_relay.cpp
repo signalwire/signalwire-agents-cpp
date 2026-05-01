@@ -648,7 +648,7 @@ TEST(relay_call_methods_without_client) {
 TEST(relay_message_default_construction) {
     Message msg;
     ASSERT_EQ(msg.message_id, "");
-    ASSERT_EQ(msg.state, "");
+    ASSERT_EQ(msg.state(), "");
     ASSERT_FALSE(msg.is_delivered());
     ASSERT_FALSE(msg.is_failed());
     ASSERT_FALSE(msg.is_terminal());
@@ -668,7 +668,7 @@ TEST(relay_message_from_params) {
 
     auto msg = Message::from_params(params);
     ASSERT_EQ(msg.message_id, "msg-001");
-    ASSERT_EQ(msg.state, "queued");
+    ASSERT_EQ(msg.state(), "queued");
     ASSERT_EQ(msg.from, "+15551234567");
     ASSERT_EQ(msg.to, "+15559876543");
     ASSERT_EQ(msg.body, "Hello!");
@@ -684,22 +684,22 @@ TEST(relay_message_from_params) {
 TEST(relay_message_state_transitions) {
     Message msg;
     msg.message_id = "msg-002";
-    msg.state = "queued";
+    msg.set_state("queued");
 
     ASSERT_FALSE(msg.is_delivered());
     ASSERT_FALSE(msg.is_failed());
     ASSERT_FALSE(msg.is_terminal());
 
     msg.update_state("initiated");
-    ASSERT_EQ(msg.state, "initiated");
+    ASSERT_EQ(msg.state(), "initiated");
     ASSERT_FALSE(msg.is_terminal());
 
     msg.update_state("sent");
-    ASSERT_EQ(msg.state, "sent");
+    ASSERT_EQ(msg.state(), "sent");
     ASSERT_FALSE(msg.is_terminal());
 
     msg.update_state("delivered");
-    ASSERT_EQ(msg.state, "delivered");
+    ASSERT_EQ(msg.state(), "delivered");
     ASSERT_TRUE(msg.is_delivered());
     ASSERT_TRUE(msg.is_terminal());
     return true;
@@ -732,7 +732,7 @@ TEST(relay_message_wait_already_terminal) {
 
 TEST(relay_message_wait_timeout) {
     Message msg;
-    msg.state = "queued";
+    msg.set_state("queued");
     // Not terminal, should timeout
     bool done = msg.wait(50);
     ASSERT_FALSE(done);
@@ -764,7 +764,7 @@ TEST(relay_message_from_params_with_state_fallback) {
     params["state"] = "sent";
 
     auto msg = Message::from_params(params);
-    ASSERT_EQ(msg.state, "sent");
+    ASSERT_EQ(msg.state(), "sent");
     return true;
 }
 

@@ -194,9 +194,21 @@ bool RelayClient::authenticate() {
 
     try {
         json result = send_request("signalwire.connect", params);
-        if (result.contains("protocol")) {
-            protocol_ = result["protocol"].get<std::string>();
+        // The send_request layer fans error responses back through the
+        // promise as a {"code": "<n>", "message": "..."} stub. A
+        // successful connect carries a "protocol" field (issued by the
+        // server). If protocol is missing the connect failed — surface
+        // that to the caller as a connect() = false instead of silently
+        // claiming success. This matches the Python relay.client which
+        // raises RelayError on connect failure.
+        if (!result.contains("protocol") || result["protocol"].is_null()) {
+            std::string err_code = result.value("code", "unknown");
+            std::string err_msg = result.value("message", "no protocol in connect response");
+            get_logger().error("Authentication rejected: code=" + err_code
+                               + " message=" + err_msg);
+            return false;
         }
+        protocol_ = result["protocol"].get<std::string>();
         if (result.contains("authorization_state")) {
             authorization_state_ = result["authorization_state"].get<std::string>();
         }
@@ -422,18 +434,25 @@ void RelayClient::handle_inbound_call(const RelayEvent& ev) {
         owned_calls_.push_back(std::move(call));
     }
 
-    // Dispatch to handler
+    // Dispatch to handler on a detached worker thread so the recv loop
+    // can keep processing while the handler does blocking work (e.g.
+    // call.answer() which sends an RPC and waits for the response). The
+    // Python SDK gets the same effect via asyncio.create_task.
     InboundCallHandler handler;
     {
         std::lock_guard<std::mutex> lock(handler_mutex_);
         handler = call_handler_;
     }
     if (handler) {
-        try {
-            handler(*call_ptr);
-        } catch (const std::exception& e) {
-            get_logger().error(std::string("Inbound call handler error: ") + e.what());
-        }
+        std::thread([handler, call_ptr]() {
+            try {
+                handler(*call_ptr);
+            } catch (const std::exception& e) {
+                get_logger().error(std::string("Inbound call handler error: ") + e.what());
+            } catch (...) {
+                get_logger().error("Inbound call handler threw unknown exception");
+            }
+        }).detach();
     }
 }
 
@@ -521,13 +540,38 @@ void RelayClient::handle_component_event(const RelayEvent& ev) {
     Call* call = find_call(call_id);
     if (!call) return;
 
-    // Route to the action by control_id
+    // Route to the action by control_id, honoring per-Action filtering:
+    // - event_type_filter: e.g. play_and_collect only resolves on
+    //   calling.call.collect (a calling.call.play finishing does NOT
+    //   resolve the wrapped CollectAction).
+    // - resolve_on_detect: detect actions resolve on the first event
+    //   carrying a `detect` payload, not on state(finished).
     if (!control_id.empty()) {
         Action* action = call->find_action(control_id);
-        if (action) {
-            action->update_state(ce.state, ev.params);
-            if (action->completed()) {
-                call->unregister_action(control_id);
+        if (action && action->event_type_matches(ev.event_type)) {
+            if (action->resolve_on_detect()) {
+                if (ev.params.contains("detect")) {
+                    action->resolve("finished", ev.params);
+                    call->unregister_action(control_id);
+                }
+                // Otherwise (state events without a detect payload) we
+                // ignore — detect's terminal signal is the detect
+                // payload itself.
+            } else if (action->resolve_on_result()) {
+                // Collect actions resolve on the first `result` payload.
+                // State updates (without a result) flow into update_state
+                // for monitoring but don't terminate the action.
+                if (ev.params.contains("result")) {
+                    action->resolve("finished", ev.params);
+                    call->unregister_action(control_id);
+                } else if (!ce.state.empty()) {
+                    action->update_state(ce.state, ev.params);
+                }
+            } else {
+                action->update_state(ce.state, ev.params);
+                if (action->completed()) {
+                    call->unregister_action(control_id);
+                }
             }
         }
     }
@@ -546,17 +590,30 @@ void RelayClient::handle_messaging_event(const RelayEvent& ev) {
             handler = message_handler_;
         }
         if (handler) {
-            try {
-                handler(msg);
-            } catch (const std::exception& e) {
-                get_logger().error(std::string("Message handler error: ") + e.what());
-            }
+            // Dispatch on a worker thread so handler-side blocking work
+            // doesn't stall the recv loop. Mirrors handle_inbound_call.
+            std::thread([handler, msg]() {
+                try {
+                    handler(msg);
+                } catch (const std::exception& e) {
+                    get_logger().error(std::string("Message handler error: ") + e.what());
+                } catch (...) {
+                    get_logger().error("Message handler threw unknown exception");
+                }
+            }).detach();
         }
     } else if (ev.event_type == "messaging.state") {
         MessageEvent me = MessageEvent::from_relay_event(ev);
         std::lock_guard<std::mutex> lock(messages_mutex_);
         auto it = messages_.find(me.message_id);
         if (it != messages_.end()) {
+            // Capture per-event metadata (e.g. carrier-blocked reason)
+            // before the terminal-state notify fires so wait()ers see
+            // the field set.
+            std::string reason = ev.params.value("reason", "");
+            if (!reason.empty()) {
+                it->second->set_reason(reason);
+            }
             it->second->update_state(me.message_state);
         }
     }
@@ -576,8 +633,11 @@ json RelayClient::send_raw_request(const std::string& method, const json& params
     return send_request(method, params);
 }
 
-Call RelayClient::dial(const json& devices) {
-    std::string tag = generate_uuid();
+Call RelayClient::dial(const json& devices,
+                       const std::string& tag_in,
+                       int dial_timeout_ms,
+                       int max_duration) {
+    std::string tag = tag_in.empty() ? generate_uuid() : tag_in;
 
     // Register pending dial before sending RPC
     auto pending = std::make_shared<PendingDial>();
@@ -591,6 +651,7 @@ Call RelayClient::dial(const json& devices) {
     json params;
     params["tag"] = tag;
     params["devices"] = devices;
+    if (max_duration > 0) params["max_duration"] = max_duration;
 
     try {
         execute("calling.dial", params);
@@ -602,7 +663,7 @@ Call RelayClient::dial(const json& devices) {
     }
 
     // Wait for the dial event (with timeout)
-    auto status = future.wait_for(std::chrono::seconds(120));
+    auto status = future.wait_for(std::chrono::milliseconds(dial_timeout_ms));
     {
         std::lock_guard<std::mutex> lock(dials_mutex_);
         pending_dials_.erase(tag);
@@ -625,26 +686,63 @@ void RelayClient::on_message(InboundMessageHandler handler) {
     message_handler_ = std::move(handler);
 }
 
-std::string RelayClient::send_message(const std::string& from, const std::string& to,
-                                       const std::string& body,
-                                       const std::vector<std::string>& media,
-                                       const std::vector<std::string>& tags,
-                                       const std::string& region) {
+Message RelayClient::send_message(const std::string& from, const std::string& to,
+                                   const std::string& body,
+                                   const std::vector<std::string>& media,
+                                   const std::vector<std::string>& tags,
+                                   const std::string& region,
+                                   const std::string& context) {
     json params;
     params["from_number"] = from;
     params["to_number"] = to;
-    params["body"] = body;
+    if (!body.empty()) params["body"] = body;
     if (!media.empty()) params["media"] = media;
     if (!tags.empty()) params["tags"] = tags;
     if (!region.empty()) params["region"] = region;
+    if (!context.empty()) {
+        params["context"] = context;
+    } else if (!protocol_.empty()) {
+        // Default to the connect-issued protocol string, matching the
+        // Python relay client (which auto-fills `context` from
+        // `self.relay_protocol`).
+        params["context"] = protocol_;
+    }
+
+    Message msg;
+    msg.from = from;
+    msg.to = to;
+    msg.body = body;
+    msg.media = media;
+    msg.tags = tags;
+    msg.direction = "outbound";
+    msg.region = region;
+    msg.set_state("queued");
 
     try {
         json result = execute("messaging.send", params);
-        return result.value("message_id", "");
+        msg.message_id = result.value("message_id", "");
+        // Track the message so server-pushed messaging.state events can
+        // route into update_state. Both the returned Message and the
+        // registry's tracked instance share the same SyncState block, so
+        // updates from the recv loop are visible through the caller's
+        // copy.
+        if (!msg.message_id.empty()) {
+            auto owned = std::make_unique<Message>(msg);
+            Message* tracked = owned.get();
+            {
+                std::lock_guard<std::mutex> lock(messages_mutex_);
+                messages_[msg.message_id] = tracked;
+            }
+            {
+                std::lock_guard<std::mutex> lock(owned_messages_mutex_);
+                owned_messages_.push_back(std::move(owned));
+            }
+        }
     } catch (const std::exception& e) {
         get_logger().error(std::string("send_message failed: ") + e.what());
-        return "";
+        msg.set_state("failed");
     }
+    return msg;
 }
 
 void RelayClient::subscribe(const std::vector<std::string>& contexts) {

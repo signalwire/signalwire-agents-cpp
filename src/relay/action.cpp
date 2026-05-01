@@ -56,12 +56,22 @@ void Action::stop() {
     send_control_command("stop");
 }
 
-void Action::pause() {
-    send_control_command("pause");
+void Action::pause(const json& extra_params) {
+    send_control_command("pause", extra_params);
 }
 
 void Action::resume() {
     send_control_command("resume");
+}
+
+void Action::volume(double amount) {
+    json extra;
+    extra["volume"] = amount;
+    send_control_command("volume", extra);
+}
+
+void Action::start_input_timers() {
+    send_control_command("start_input_timers");
 }
 
 void Action::on_completed(CompletedCallback cb) {
@@ -123,7 +133,8 @@ void Action::resolve(const std::string& final_state, const json& result) {
     }
 }
 
-void Action::send_control_command(const std::string& operation) {
+void Action::send_control_command(const std::string& operation,
+                                  const json& extra_params) {
     if (!state_->client) {
         get_logger().warn("Action::send_control_command called without client");
         return;
@@ -137,9 +148,17 @@ void Action::send_control_command(const std::string& operation) {
     params["node_id"] = state_->node_id;
     params["call_id"] = state_->call_id;
     params["control_id"] = state_->control_id;
+    if (extra_params.is_object()) {
+        for (auto& [key, val] : extra_params.items()) {
+            params[key] = val;
+        }
+    }
 
     try {
-        std::string method = "calling.play." + operation;
+        std::string prefix = state_->method_prefix.empty()
+            ? std::string("calling.play")
+            : state_->method_prefix;
+        std::string method = prefix + "." + operation;
         state_->client->execute(method, params);
     } catch (const std::exception& e) {
         get_logger().info(std::string("Action control command failed: ") + e.what());

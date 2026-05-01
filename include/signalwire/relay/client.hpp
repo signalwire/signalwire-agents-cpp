@@ -81,7 +81,23 @@ public:
 
     // Call control
     void on_call(InboundCallHandler handler);
-    Call dial(const json& devices);
+
+    /// Dial outbound. The `devices` argument is the nested
+    /// "device-of-leg-of-leg" array used by the Python SDK
+    /// (`[[{type:phone,...}]]`). Returns a Call once the server emits
+    /// calling.call.dial(answered) for the dial's tag, or an empty Call
+    /// on timeout / failure.
+    ///
+    /// `tag` lets callers pin an explicit dial tag for journal-based
+    /// assertions; if blank, a UUID is generated.
+    /// `dial_timeout_ms` caps how long dial() blocks waiting for the
+    /// server's terminal dial event.
+    /// `max_duration` (seconds) is forwarded into the calling.dial frame
+    /// when non-zero.
+    Call dial(const json& devices,
+              const std::string& tag = "",
+              int dial_timeout_ms = 120000,
+              int max_duration = 0);
 
     /// Register a generic event observer. Called for every dispatched
     /// `signalwire.event` after typed routing (on_call/on_message/action
@@ -96,11 +112,17 @@ public:
 
     // Messaging
     void on_message(InboundMessageHandler handler);
-    std::string send_message(const std::string& from, const std::string& to,
-                              const std::string& body,
-                              const std::vector<std::string>& media = {},
-                              const std::vector<std::string>& tags = {},
-                              const std::string& region = "");
+
+    /// Send an SMS/MMS message via messaging.send.
+    /// Returns a Message tracker whose state advances as the server
+    /// pushes messaging.state events. Use `Message::wait()` to block
+    /// until the terminal state (`delivered` / `undelivered` / `failed`).
+    Message send_message(const std::string& from, const std::string& to,
+                          const std::string& body,
+                          const std::vector<std::string>& media = {},
+                          const std::vector<std::string>& tags = {},
+                          const std::string& region = "",
+                          const std::string& context = "");
 
     // Context management
     void subscribe(const std::vector<std::string>& contexts);

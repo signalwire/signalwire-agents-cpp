@@ -161,6 +161,16 @@ static std::vector<TestCase>& get_tests() {
 #include "test_rest_mock_registry.cpp"
 #include "test_rest_mock_pagination.cpp"
 
+// Mock-RELAY-backed tests (translated from
+// signalwire-python/tests/unit/relay/test_*_mock.py). These hit the local
+// mock_relay WebSocket server on port 8782.
+#include "test_relay_mock_connect.cpp"
+#include "test_relay_mock_inbound_call.cpp"
+#include "test_relay_mock_messaging.cpp"
+#include "test_relay_mock_actions.cpp"
+#include "test_relay_mock_event_dispatch.cpp"
+#include "test_relay_mock_outbound_call.cpp"
+
 int main(int argc, char** argv) {
     // Suppress logging during tests
     signalwire::Logger::instance().suppress();
