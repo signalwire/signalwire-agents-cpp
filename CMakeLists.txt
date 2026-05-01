@@ -24,7 +24,10 @@ target_include_directories(signalwire PUBLIC ${CMAKE_SOURCE_DIR}/include ${CMAKE
 
 # Tests
 enable_testing()
-add_executable(run_tests tests/test_main.cpp)
+add_executable(run_tests
+    tests/test_main.cpp
+    tests/mocktest.cpp
+)
 target_link_libraries(run_tests signalwire)
 target_compile_definitions(run_tests PRIVATE PROJECT_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 add_test(NAME all_tests COMMAND run_tests)

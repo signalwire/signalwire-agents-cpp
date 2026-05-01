@@ -76,19 +76,175 @@ public:
 
         CallingNamespace(const HttpClient& c) : client(c) {}
 
-        json dial(const json& params) const { return client.post("/api/calling/calls", params); }
+        // ----------------------------------------------------------------
+        // Command-dispatch entry point (matches Python CallingNamespace).
+        //
+        // All 32 commands are POST /api/calling/calls with a body shaped
+        // {"command": "<name>", "id": "<call_id>"?, "params": {...}}.
+        // ``id`` is omitted for calls that target no specific call (e.g.
+        // ``dial`` and ``update``).
+        // ----------------------------------------------------------------
+        json execute(const std::string& command,
+                     const json& params,
+                     const std::optional<std::string>& call_id = std::nullopt) const {
+            json body = {{"command", command}, {"params", params}};
+            if (call_id) body["id"] = *call_id;
+            return client.post("/api/calling/calls", body);
+        }
+
+        // Lifecycle
+        json dial(const json& params) const { return execute("dial", params); }
+        json update(const json& params) const { return execute("update", params); }
+        json end(const std::string& call_id, const json& params = json::object()) const {
+            return execute("calling.end", params, call_id);
+        }
+        json transfer(const std::string& call_id, const json& params) const {
+            return execute("calling.transfer", params, call_id);
+        }
+        json disconnect(const std::string& call_id, const json& params = json::object()) const {
+            return execute("calling.disconnect", params, call_id);
+        }
+
+        // Play
+        json play(const std::string& call_id, const json& params) const {
+            return execute("calling.play", params, call_id);
+        }
+        json play_pause(const std::string& call_id, const json& params) const {
+            return execute("calling.play.pause", params, call_id);
+        }
+        json play_resume(const std::string& call_id, const json& params) const {
+            return execute("calling.play.resume", params, call_id);
+        }
+        json play_stop(const std::string& call_id, const json& params) const {
+            return execute("calling.play.stop", params, call_id);
+        }
+        json play_volume(const std::string& call_id, const json& params) const {
+            return execute("calling.play.volume", params, call_id);
+        }
+
+        // Record
+        json record(const std::string& call_id, const json& params) const {
+            return execute("calling.record", params, call_id);
+        }
+        json record_pause(const std::string& call_id, const json& params) const {
+            return execute("calling.record.pause", params, call_id);
+        }
+        json record_resume(const std::string& call_id, const json& params) const {
+            return execute("calling.record.resume", params, call_id);
+        }
+        json record_stop(const std::string& call_id, const json& params) const {
+            return execute("calling.record.stop", params, call_id);
+        }
+
+        // Collect
+        json collect(const std::string& call_id, const json& params) const {
+            return execute("calling.collect", params, call_id);
+        }
+        json collect_stop(const std::string& call_id, const json& params) const {
+            return execute("calling.collect.stop", params, call_id);
+        }
+        json collect_start_input_timers(const std::string& call_id,
+                                        const json& params) const {
+            return execute("calling.collect.start_input_timers", params, call_id);
+        }
+
+        // Detect
+        json detect(const std::string& call_id, const json& params) const {
+            return execute("calling.detect", params, call_id);
+        }
+        json detect_stop(const std::string& call_id, const json& params) const {
+            return execute("calling.detect.stop", params, call_id);
+        }
+
+        // Tap
+        json tap(const std::string& call_id, const json& params) const {
+            return execute("calling.tap", params, call_id);
+        }
+        json tap_stop(const std::string& call_id, const json& params) const {
+            return execute("calling.tap.stop", params, call_id);
+        }
+
+        // Stream
+        json stream(const std::string& call_id, const json& params) const {
+            return execute("calling.stream", params, call_id);
+        }
+        json stream_stop(const std::string& call_id, const json& params) const {
+            return execute("calling.stream.stop", params, call_id);
+        }
+
+        // Denoise
+        json denoise(const std::string& call_id,
+                     const json& params = json::object()) const {
+            return execute("calling.denoise", params, call_id);
+        }
+        json denoise_stop(const std::string& call_id, const json& params) const {
+            return execute("calling.denoise.stop", params, call_id);
+        }
+
+        // Transcribe
+        json transcribe(const std::string& call_id, const json& params) const {
+            return execute("calling.transcribe", params, call_id);
+        }
+        json transcribe_stop(const std::string& call_id, const json& params) const {
+            return execute("calling.transcribe.stop", params, call_id);
+        }
+
+        // AI
+        json ai_message(const std::string& call_id, const json& params) const {
+            return execute("calling.ai_message", params, call_id);
+        }
+        json ai_hold(const std::string& call_id,
+                     const json& params = json::object()) const {
+            return execute("calling.ai_hold", params, call_id);
+        }
+        json ai_unhold(const std::string& call_id,
+                       const json& params = json::object()) const {
+            return execute("calling.ai_unhold", params, call_id);
+        }
+        json ai_stop(const std::string& call_id,
+                     const json& params = json::object()) const {
+            return execute("calling.ai.stop", params, call_id);
+        }
+
+        // Live transcribe / translate
+        json live_transcribe(const std::string& call_id, const json& params) const {
+            return execute("calling.live_transcribe", params, call_id);
+        }
+        json live_translate(const std::string& call_id, const json& params) const {
+            return execute("calling.live_translate", params, call_id);
+        }
+
+        // Fax
+        json send_fax_stop(const std::string& call_id,
+                           const json& params = json::object()) const {
+            return execute("calling.send_fax.stop", params, call_id);
+        }
+        json receive_fax_stop(const std::string& call_id,
+                              const json& params = json::object()) const {
+            return execute("calling.receive_fax.stop", params, call_id);
+        }
+
+        // SIP refer
+        json refer(const std::string& call_id, const json& params) const {
+            return execute("calling.refer", params, call_id);
+        }
+
+        // Custom user event
+        json user_event(const std::string& call_id, const json& params) const {
+            return execute("calling.user_event", params, call_id);
+        }
+
+        // ----------------------------------------------------------------
+        // Legacy convenience accessors (kept for backwards compatibility).
+        // These use direct REST paths rather than the command-dispatch
+        // wire format and are retained so existing tests keep linking.
+        // ----------------------------------------------------------------
         json list_calls(const std::map<std::string, std::string>& p = {}) const { return client.get("/api/calling/calls", p); }
         json get_call(const std::string& id) const { return client.get("/api/calling/calls/" + id); }
         json update_call(const std::string& id, const json& data) const { return client.put("/api/calling/calls/" + id, data); }
         json end_call(const std::string& id) const { return client.del("/api/calling/calls/" + id); }
-        json play(const std::string& id, const json& data) const { return client.post("/api/calling/calls/" + id + "/play", data); }
-        json record(const std::string& id, const json& data) const { return client.post("/api/calling/calls/" + id + "/record", data); }
-        json collect(const std::string& id, const json& data) const { return client.post("/api/calling/calls/" + id + "/collect", data); }
-        json tap(const std::string& id, const json& data) const { return client.post("/api/calling/calls/" + id + "/tap", data); }
-        json detect(const std::string& id, const json& data) const { return client.post("/api/calling/calls/" + id + "/detect", data); }
         json connect(const std::string& id, const json& data) const { return client.post("/api/calling/calls/" + id + "/connect", data); }
         json send_digits(const std::string& id, const json& data) const { return client.post("/api/calling/calls/" + id + "/send_digits", data); }
-        json transfer(const std::string& id, const json& data) const { return client.post("/api/calling/calls/" + id + "/transfer", data); }
         json answer(const std::string& id) const { return client.post("/api/calling/calls/" + id + "/answer"); }
         json hangup(const std::string& id) const { return client.post("/api/calling/calls/" + id + "/hangup"); }
         json hold(const std::string& id) const { return client.post("/api/calling/calls/" + id + "/hold"); }
@@ -247,13 +403,43 @@ public:
         }
     };
 
+    // Datasphere: documents are a CRUD resource with chunk sub-operations.
+    // We keep the existing CrudResource-typed ``documents`` field for any
+    // callers using it directly; add a richer DatasphereDocuments wrapper
+    // with the search + chunk methods on a parallel ``documents_ext``-style
+    // accessor not needed because the CrudResource methods (list/get/etc.)
+    // already cover the basics. The chunk methods live directly on the
+    // namespace via ``DatasphereDocumentsExt``.
+    struct DatasphereDocuments : public CrudResource {
+        DatasphereDocuments(const HttpClient& c)
+            : CrudResource(c, "/api/datasphere/documents") {}
+        json search(const json& data) const {
+            return client_.post(base_path_ + "/search", data);
+        }
+        json list_chunks(const std::string& document_id,
+                         const std::map<std::string, std::string>& params = {}) const {
+            return client_.get(base_path_ + "/" + document_id + "/chunks", params);
+        }
+        json get_chunk(const std::string& document_id,
+                       const std::string& chunk_id) const {
+            return client_.get(base_path_ + "/" + document_id + "/chunks/" + chunk_id);
+        }
+        json delete_chunk(const std::string& document_id,
+                          const std::string& chunk_id) const {
+            return client_.del(base_path_ + "/" + document_id + "/chunks/" + chunk_id);
+        }
+    };
+
     struct DatasphereNamespace {
-        CrudResource documents;
+        DatasphereDocuments documents;
         const HttpClient& client;
 
         DatasphereNamespace(const HttpClient& c)
-            : documents(c, "/api/datasphere/documents"), client(c) {}
+            : documents(c), client(c) {}
 
+        // Legacy alias retained -- callers can still invoke
+        // ``client.datasphere().search({...})`` instead of going through
+        // ``documents.search``.
         json search(const json& data) const {
             return client.post("/api/datasphere/documents/search", data);
         }
@@ -270,40 +456,227 @@ public:
               recordings(c, "/api/video/recordings") {}
     };
 
+    // ---------------------------------------------------------------------
+    // Compat sub-resources (Twilio-compatible LAML API). These mirror the
+    // Python ``CompatCalls`` / ``CompatMessages`` / ``CompatFaxes`` /
+    // ``CompatPhoneNumbers`` classes. All paths are scoped by the project
+    // (account_sid) at the LAML root ``/api/laml/2010-04-01/Accounts/{sid}``.
+    // ---------------------------------------------------------------------
+    struct CompatCalls : public CrudResource {
+        CompatCalls(const HttpClient& c, const std::string& base)
+            : CrudResource(c, base) {}
+
+        // Override update -- compat uses POST not PUT for resource updates.
+        json update(const std::string& sid, const json& data) const {
+            return client_.post(base_path_ + "/" + sid, data);
+        }
+
+        // Recording sub-resources.
+        json start_recording(const std::string& call_sid, const json& data) const {
+            return client_.post(base_path_ + "/" + call_sid + "/Recordings", data);
+        }
+        json update_recording(const std::string& call_sid,
+                              const std::string& recording_sid,
+                              const json& data) const {
+            return client_.post(base_path_ + "/" + call_sid + "/Recordings/" + recording_sid, data);
+        }
+
+        // Stream sub-resources.
+        json start_stream(const std::string& call_sid, const json& data) const {
+            return client_.post(base_path_ + "/" + call_sid + "/Streams", data);
+        }
+        json stop_stream(const std::string& call_sid,
+                         const std::string& stream_sid,
+                         const json& data) const {
+            return client_.post(base_path_ + "/" + call_sid + "/Streams/" + stream_sid, data);
+        }
+    };
+
+    struct CompatMessages : public CrudResource {
+        CompatMessages(const HttpClient& c, const std::string& base)
+            : CrudResource(c, base) {}
+
+        json update(const std::string& sid, const json& data) const {
+            return client_.post(base_path_ + "/" + sid, data);
+        }
+
+        json list_media(const std::string& message_sid,
+                        const std::map<std::string, std::string>& params = {}) const {
+            return client_.get(base_path_ + "/" + message_sid + "/Media", params);
+        }
+        json get_media(const std::string& message_sid,
+                       const std::string& media_sid) const {
+            return client_.get(base_path_ + "/" + message_sid + "/Media/" + media_sid);
+        }
+        json delete_media(const std::string& message_sid,
+                          const std::string& media_sid) const {
+            return client_.del(base_path_ + "/" + message_sid + "/Media/" + media_sid);
+        }
+    };
+
+    struct CompatFaxes : public CrudResource {
+        CompatFaxes(const HttpClient& c, const std::string& base)
+            : CrudResource(c, base) {}
+
+        json update(const std::string& sid, const json& data) const {
+            return client_.post(base_path_ + "/" + sid, data);
+        }
+
+        json list_media(const std::string& fax_sid,
+                        const std::map<std::string, std::string>& params = {}) const {
+            return client_.get(base_path_ + "/" + fax_sid + "/Media", params);
+        }
+        json get_media(const std::string& fax_sid,
+                       const std::string& media_sid) const {
+            return client_.get(base_path_ + "/" + fax_sid + "/Media/" + media_sid);
+        }
+        json delete_media(const std::string& fax_sid,
+                          const std::string& media_sid) const {
+            return client_.del(base_path_ + "/" + fax_sid + "/Media/" + media_sid);
+        }
+    };
+
+    struct CompatPhoneNumbers {
+        const HttpClient& client;
+        std::string base_path;          // /api/laml/.../IncomingPhoneNumbers
+        std::string available_base;     // /api/laml/.../AvailablePhoneNumbers
+        std::string imported_base;      // /api/laml/.../ImportedPhoneNumbers
+
+        CompatPhoneNumbers(const HttpClient& c, const std::string& account_base)
+            : client(c),
+              base_path(account_base + "/IncomingPhoneNumbers"),
+              available_base(account_base + "/AvailablePhoneNumbers"),
+              imported_base(account_base + "/ImportedPhoneNumbers") {}
+
+        json list(const std::map<std::string, std::string>& params = {}) const {
+            return client.get(base_path, params);
+        }
+        json get(const std::string& sid) const {
+            return client.get(base_path + "/" + sid);
+        }
+        json update(const std::string& sid, const json& data) const {
+            return client.post(base_path + "/" + sid, data);
+        }
+        json delete_(const std::string& sid) const {
+            return client.del(base_path + "/" + sid);
+        }
+        json purchase(const json& data) const {
+            return client.post(base_path, data);
+        }
+        json import_number(const json& data) const {
+            return client.post(imported_base, data);
+        }
+        json list_available_countries(const std::map<std::string, std::string>& params = {}) const {
+            return client.get(available_base, params);
+        }
+        json search_local(const std::string& country,
+                          const std::map<std::string, std::string>& params = {}) const {
+            return client.get(available_base + "/" + country + "/Local", params);
+        }
+        json search_toll_free(const std::string& country,
+                              const std::map<std::string, std::string>& params = {}) const {
+            return client.get(available_base + "/" + country + "/TollFree", params);
+        }
+    };
+
     struct CompatNamespace {
         const HttpClient& client;
+        std::string account_base;
 
-        CompatNamespace(const HttpClient& c) : client(c) {}
+        // Sub-resources (Python parity).
+        CompatCalls calls;
+        CompatMessages messages;
+        CompatFaxes faxes;
+        CompatPhoneNumbers phone_numbers;
 
+        CompatNamespace(const HttpClient& c, const std::string& account_sid)
+            : client(c),
+              account_base("/api/laml/2010-04-01/Accounts/" + account_sid),
+              calls(c, account_base + "/Calls"),
+              messages(c, account_base + "/Messages"),
+              faxes(c, account_base + "/Faxes"),
+              phone_numbers(c, account_base) {}
+
+        // Legacy convenience methods retained for backwards compatibility
+        // (the existing rest_compat_laml.cpp example references these).
+        // The paths are intentionally not project-scoped to avoid changing
+        // the wire contract any callers may rely on.
         json create_call(const json& data) const { return client.post("/api/laml/2010-04-01/Accounts/calls", data); }
         json send_message(const json& data) const { return client.post("/api/laml/2010-04-01/Accounts/messages", data); }
         json list_calls(const std::map<std::string, std::string>& p = {}) const { return client.get("/api/laml/2010-04-01/Accounts/calls", p); }
         json list_messages(const std::map<std::string, std::string>& p = {}) const { return client.get("/api/laml/2010-04-01/Accounts/messages", p); }
     };
 
-    // Simple CRUD namespaces
+    // ---------------------------------------------------------------------
+    // Simple CRUD namespaces (Python parity additions). The existing CRUD
+    // surface from CrudResource is preserved; we just augment with the
+    // ``list / get / create / delete / update`` methods that Python exposes
+    // with non-standard verbs (``addresses`` skips update; ``short_codes``
+    // uses PUT; etc.) and add the sub-resource accessors required by the
+    // mock-server tests.
+    // ---------------------------------------------------------------------
     struct AddressesNamespace : public CrudResource {
         AddressesNamespace(const HttpClient& c) : CrudResource(c, "/api/relay/rest/addresses") {}
+        // Python-parity ``delete`` alias (CrudResource exposes ``del``).
+        json delete_(const std::string& id) const { return client_.del(base_path_ + "/" + id); }
     };
 
     struct QueuesNamespace : public CrudResource {
         QueuesNamespace(const HttpClient& c) : CrudResource(c, "/api/relay/rest/queues") {}
+        // Override update -- Python uses PUT, not PATCH (the CrudResource default).
+        json update(const std::string& id, const json& data) const {
+            return client_.put(base_path_ + "/" + id, data);
+        }
+        json list_members(const std::string& queue_id,
+                          const std::map<std::string, std::string>& params = {}) const {
+            return client_.get(base_path_ + "/" + queue_id + "/members", params);
+        }
+        json get_next_member(const std::string& queue_id) const {
+            return client_.get(base_path_ + "/" + queue_id + "/members/next");
+        }
+        json get_member(const std::string& queue_id, const std::string& member_id) const {
+            return client_.get(base_path_ + "/" + queue_id + "/members/" + member_id);
+        }
     };
 
     struct RecordingsNamespace : public CrudResource {
         RecordingsNamespace(const HttpClient& c) : CrudResource(c, "/api/relay/rest/recordings") {}
+        // Python ``delete`` alias.
+        json delete_(const std::string& id) const { return client_.del(base_path_ + "/" + id); }
     };
 
     struct NumberGroupsNamespace : public CrudResource {
         NumberGroupsNamespace(const HttpClient& c) : CrudResource(c, "/api/relay/rest/number_groups") {}
+        // Python NumberGroups uses PUT for update (overrides default PATCH).
+        json update(const std::string& id, const json& data) const {
+            return client_.put(base_path_ + "/" + id, data);
+        }
+        // Membership operations.
+        json list_memberships(const std::string& group_id,
+                              const std::map<std::string, std::string>& params = {}) const {
+            return client_.get(base_path_ + "/" + group_id + "/number_group_memberships", params);
+        }
+        json add_membership(const std::string& group_id, const json& data) const {
+            return client_.post(base_path_ + "/" + group_id + "/number_group_memberships", data);
+        }
+        json get_membership(const std::string& membership_id) const {
+            return client_.get("/api/relay/rest/number_group_memberships/" + membership_id);
+        }
+        json delete_membership(const std::string& membership_id) const {
+            return client_.del("/api/relay/rest/number_group_memberships/" + membership_id);
+        }
     };
 
     struct VerifiedCallersNamespace : public CrudResource {
         VerifiedCallersNamespace(const HttpClient& c) : CrudResource(c, "/api/relay/rest/verified_callers") {}
     };
 
+    // SipProfile is a singleton (no resource id). We expose ``get`` /
+    // ``update`` directly on the namespace (PUT for update -- Python parity).
     struct SipProfileNamespace : public CrudResource {
         SipProfileNamespace(const HttpClient& c) : CrudResource(c, "/api/relay/rest/sip_profile") {}
+        json get() const { return client_.get(base_path_); }
+        json update(const json& data) const { return client_.put(base_path_, data); }
     };
 
     struct LookupNamespace {
@@ -314,15 +687,35 @@ public:
 
     struct ShortCodesNamespace : public CrudResource {
         ShortCodesNamespace(const HttpClient& c) : CrudResource(c, "/api/relay/rest/short_codes") {}
+        // Python ShortCodes.update uses PUT explicitly.
+        json update(const std::string& id, const json& data) const {
+            return client_.put(base_path_ + "/" + id, data);
+        }
     };
 
+    // The Python imported_numbers namespace lives at
+    // /api/relay/rest/imported_phone_numbers and only exposes ``create``.
+    // We retain the legacy /api/relay/rest/imported_numbers path for callers
+    // who hit it via list/get/update/delete and add the Python-parity
+    // ``create`` that posts to the imported_phone_numbers endpoint.
     struct ImportedNumbersNamespace : public CrudResource {
         ImportedNumbersNamespace(const HttpClient& c) : CrudResource(c, "/api/relay/rest/imported_numbers") {}
+        // Python parity: POST /api/relay/rest/imported_phone_numbers.
+        json create(const json& data) const {
+            return client_.post("/api/relay/rest/imported_phone_numbers", data);
+        }
     };
 
     struct MFANamespace {
         const HttpClient& client;
         MFANamespace(const HttpClient& c) : client(c) {}
+        // Python parity:
+        json sms(const json& data) const { return client.post("/api/relay/rest/mfa/sms", data); }
+        json call(const json& data) const { return client.post("/api/relay/rest/mfa/call", data); }
+        json verify(const std::string& request_id, const json& data) const {
+            return client.post("/api/relay/rest/mfa/" + request_id + "/verify", data);
+        }
+        // Legacy convenience accessors.
         json request_code(const json& data) const { return client.post("/api/mfa/request", data); }
         json verify_code(const json& data) const { return client.post("/api/mfa/verify", data); }
     };
@@ -335,9 +728,26 @@ public:
         LogsNamespace(const HttpClient& c) : CrudResource(c, "/api/relay/rest/logs") {}
     };
 
+    // Project tokens (Python: client.project.tokens.{create,update,delete}).
+    struct ProjectTokens {
+        const HttpClient& client;
+        const std::string base_path = "/api/project/tokens";
+        ProjectTokens(const HttpClient& c) : client(c) {}
+        json create(const json& data) const { return client.post(base_path, data); }
+        json update(const std::string& token_id, const json& data) const {
+            return client.patch(base_path + "/" + token_id, data);
+        }
+        json delete_(const std::string& token_id) const {
+            return client.del(base_path + "/" + token_id);
+        }
+    };
+
     struct ProjectNamespace {
         const HttpClient& client;
-        ProjectNamespace(const HttpClient& c) : client(c) {}
+        ProjectTokens tokens;
+        ProjectNamespace(const HttpClient& c) : client(c), tokens(c) {}
+        // Legacy direct accessors -- these don't have Python equivalents
+        // and remain for backwards compatibility with existing tests.
         json get_project() const { return client.get("/api/relay/rest/project"); }
         json update_project(const json& data) const { return client.put("/api/relay/rest/project", data); }
     };

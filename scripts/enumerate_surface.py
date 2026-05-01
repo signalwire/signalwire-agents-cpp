@@ -211,6 +211,39 @@ CLASS_RENAME_MAP: dict[tuple[str, str], tuple[str, str]] = {
     ("signalwire::rest", "VerifiedCallersNamespace"): (
         "signalwire.rest.namespaces.verified_callers", "VerifiedCallersResource",
     ),
+    # The Compat namespace exposes nested sub-resource structs in C++; the
+    # Python equivalents live as classes inside namespaces/compat.py.
+    ("signalwire::rest", "CompatCalls"): (
+        "signalwire.rest.namespaces.compat", "CompatCalls",
+    ),
+    ("signalwire::rest", "CompatMessages"): (
+        "signalwire.rest.namespaces.compat", "CompatMessages",
+    ),
+    ("signalwire::rest", "CompatFaxes"): (
+        "signalwire.rest.namespaces.compat", "CompatFaxes",
+    ),
+    ("signalwire::rest", "CompatPhoneNumbers"): (
+        "signalwire.rest.namespaces.compat", "CompatPhoneNumbers",
+    ),
+    # ProjectTokens is exposed as a nested class on the project namespace.
+    ("signalwire::rest", "ProjectTokens"): (
+        "signalwire.rest.namespaces.project", "ProjectTokens",
+    ),
+    # DatasphereDocuments is the typed wrapper around the documents
+    # CrudResource; Python exposes it as DatasphereDocuments inside
+    # namespaces/datasphere.py.
+    ("signalwire::rest", "DatasphereDocuments"): (
+        "signalwire.rest.namespaces.datasphere", "DatasphereDocuments",
+    ),
+}
+
+
+# -- Method rename map -------------------------------------------------------
+# C++ uses ``delete_`` and similar trailing-underscore method names because
+# ``delete`` is a reserved keyword. Python uses the unsuffixed names. Map
+# back so the diff lines up.
+_METHOD_RENAMES: dict[str, str] = {
+    "delete_": "delete",
 }
 
 
@@ -538,7 +571,9 @@ def parse_header(path: Path) -> list[tuple[str, str, list[str]]]:
                 # but for this SDK that's rare; we only emit the immediate
                 # class's methods under its own name.
                 class_name = scopes[-1].name
-                collected.setdefault((ns_path, class_name), []).append(method_name)
+                # Map ``delete_`` (C++ keyword-avoidance) -> Python ``delete``.
+                emit_method = _METHOD_RENAMES.get(method_name, method_name)
+                collected.setdefault((ns_path, class_name), []).append(emit_method)
 
         # --- Update brace depth for any other line with braces
         # (skip string braces already via strip_strings)

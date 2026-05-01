@@ -45,8 +45,8 @@ if not PSDK.is_dir():
 
 sys.path.insert(0, str(HERE))
 from enumerate_surface import (  # type: ignore
-    CLASS_MODULE_MAP, CLASS_RENAME_MAP, MIXIN_PROJECTIONS, camel_to_snake,
-    module_for_class, native_ns_to_module,
+    CLASS_MODULE_MAP, CLASS_RENAME_MAP, MIXIN_PROJECTIONS, _METHOD_RENAMES,
+    camel_to_snake, module_for_class, native_ns_to_module,
 )
 
 
@@ -359,6 +359,10 @@ def collect(
                     # don't map to Python's signature inventory.
                     continue
                 method_canonical = camel_to_snake(native)
+                # Map C++ keyword-avoidance trailing underscore methods
+                # (delete_, etc.) back to Python's unsuffixed names so the
+                # diff lines up.
+                method_canonical = _METHOD_RENAMES.get(method_canonical, method_canonical)
             ctx = f"{mod}.{name}.{method_canonical}"
             try:
                 sig = build_signature(m, aliases, ctx)
