@@ -1143,3 +1143,8 @@ signalwire.core.skill_manager.SkillManager.logger: cpp_only: see AgentServer.log
 signalwire.core.swml_service.SWMLService.security: cpp_only: Python SWMLService.security exposes a per-service security/auth helper object; C++ folds the same operations (validate_basic_auth, get_basic_auth_credentials) directly onto SWMLService methods.
 signalwire.core.swml_service.SWMLService.verb_registry: cpp_only: Python SWMLService.verb_registry is the verb-name-to-handler map exposed for inspection; C++ keeps the verb registry private and only exposes the user-facing verb operations (add_verb, has_function, etc.).
 signalwire.skills.registry.SkillRegistry.logger: cpp_only: see AgentServer.logger — same module-level vs per-instance logger pattern.
+
+## POM internal collections
+
+signalwire.pom.pom.PromptObjectModel.sections: cpp-bean-accessor — C++ exposes the section list via sections() accessor method (private storage); Python exposes public `sections` attribute
+signalwire.pom.pom.Section.subsections: cpp-bean-accessor — C++ exposes the subsection list via subsections() accessor method (private storage); Python exposes public `subsections` attribute

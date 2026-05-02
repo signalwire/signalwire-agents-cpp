@@ -305,3 +305,13 @@ signalwire.core.skill_base.SkillBase.register_tools: cpp_typed_skill_pipeline
 signalwire.core.skill_manager.SkillManager.load_skill: cpp_explicit_load_status
 signalwire.core.skill_manager.SkillManager.unload_skill: cpp_explicit_load_status
 signalwire.skills.registry.SkillRegistry.list_skills: cpp_list_skills_names
+
+## POM (signalwire.pom.pom) — C++ idiom
+
+signalwire.pom.pom.PromptObjectModel.__init__: cpp-overload-set — C++ exposes overloaded ctors (default, copy-from-list, copy-from-PromptObjectModel) where Python has a single __init__ with default arg
+signalwire.pom.pom.PromptObjectModel.add_section: cpp-overload-set — C++ exposes 4 overloads (title-only / title+body / title+bullets / full) where Python uses single positional+kwargs
+signalwire.pom.pom.PromptObjectModel.add_pom_as_subsection: cpp-typed-overload — C++ takes typed Section& or std::string title parameter where Python uses Union[str, Section]
+signalwire.pom.pom.PromptObjectModel.from_json: cpp-typed-overload — C++ takes const std::string& where Python's from_json takes Union[str, dict]
+signalwire.pom.pom.PromptObjectModel.from_yaml: cpp-typed-overload — C++ takes const std::string& where Python's from_yaml takes Union[str, dict]
+signalwire.pom.pom.Section.__init__: cpp-overload-set — C++ exposes overloaded ctors (default, builder, copy) where Python has a single __init__ with positional+kwargs
+signalwire.pom.pom.Section.add_subsection: cpp-overload-set — C++ exposes 4 overloads (title-only / title+body / title+bullets / full) where Python uses single positional+kwargs
