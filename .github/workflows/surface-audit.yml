@@ -38,8 +38,7 @@ jobs:
         with:
           repository: signalwire/porting-sdk
           path: porting-sdk
-          # Unauthenticated clone of the public reference. If the repo moves
-          # private, add a token here.
+          token: ${{ secrets.PORTING_SDK_TOKEN }}
 
       - name: Setup Python
         uses: actions/setup-python@v5
