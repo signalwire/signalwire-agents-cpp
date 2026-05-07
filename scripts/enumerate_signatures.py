@@ -33,20 +33,30 @@ import yaml
 # Configure libclang BEFORE importing clang.cindex Index.create()
 import clang.cindex
 import importlib.util as _ilu
+import os as _os
+import sysconfig as _sc
 
 def _find_libclang() -> str | None:
     """Find a usable libclang.so across local-dev / pip / system layouts."""
-    # 1. pip's `libclang` package self-bundles libclang.so at
-    #    <site-packages>/libclang/native/libclang.so (used in CI).
-    try:
-        spec = _ilu.find_spec("libclang")
-        if spec and spec.origin:
-            cand = Path(spec.origin).parent / "native" / "libclang.so"
+    # 0. Explicit override via env var — wins over everything. CI sets this
+    #    when an exact path is known (avoids guessing which of `libclang`
+    #    vs `clang` pip packages has the matching .so version).
+    env_path = _os.environ.get("SW_LIBCLANG_PATH")
+    if env_path and Path(env_path).is_file():
+        return env_path
+    # 1. pip's `libclang` package — bundles libclang.so at
+    #    <site-packages>/libclang/native/libclang.so. Newer than pip's
+    #    `clang` package's bundled .so so always prefer it. Look it up
+    #    by walking site-packages directly because find_spec on this
+    #    package can return origin=None depending on pip layout.
+    for site_dir in (_sc.get_paths().get("purelib"), _sc.get_paths().get("platlib")):
+        if site_dir:
+            cand = Path(site_dir) / "libclang" / "native" / "libclang.so"
             if cand.is_file():
                 return str(cand)
-    except (ImportError, ValueError):
-        pass
-    # 2. Some `clang` PyPI builds also bundle the .so at clang/native/.
+    # 2. `clang` PyPI package's bundled .so — older, often missing newer
+    #    symbols (clang_getOffsetOfBase). Used only if `libclang` isn't
+    #    installed.
     try:
         spec = _ilu.find_spec("clang")
         if spec and spec.origin:
@@ -55,8 +65,9 @@ def _find_libclang() -> str | None:
                 return str(cand)
     except (ImportError, ValueError):
         pass
-    # 3. System-installed via apt: `libclang-dev` provides versioned files
-    #    like /usr/lib/x86_64-linux-gnu/libclang-18.so.1 — try common ones.
+    # 3. System-installed via apt: `libclang-dev` provides
+    #    /usr/lib/x86_64-linux-gnu/libclang-NN.so.1 (and sometimes the
+    #    unversioned `libclang.so` symlink).
     for cand in (
         "/usr/lib/x86_64-linux-gnu/libclang.so",
         "/usr/lib/x86_64-linux-gnu/libclang-18.so.1",
