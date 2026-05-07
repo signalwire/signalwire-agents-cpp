@@ -32,9 +32,47 @@ import yaml
 
 # Configure libclang BEFORE importing clang.cindex Index.create()
 import clang.cindex
-_BUNDLED = "/home/devuser/.local/lib/python3.12/site-packages/clang/native/libclang.so"
-if Path(_BUNDLED).is_file():
-    clang.cindex.Config.set_library_file(_BUNDLED)
+import importlib.util as _ilu
+
+def _find_libclang() -> str | None:
+    """Find a usable libclang.so across local-dev / pip / system layouts."""
+    # 1. pip's `libclang` package self-bundles libclang.so at
+    #    <site-packages>/libclang/native/libclang.so (used in CI).
+    try:
+        spec = _ilu.find_spec("libclang")
+        if spec and spec.origin:
+            cand = Path(spec.origin).parent / "native" / "libclang.so"
+            if cand.is_file():
+                return str(cand)
+    except (ImportError, ValueError):
+        pass
+    # 2. Some `clang` PyPI builds also bundle the .so at clang/native/.
+    try:
+        spec = _ilu.find_spec("clang")
+        if spec and spec.origin:
+            cand = Path(spec.origin).parent / "native" / "libclang.so"
+            if cand.is_file():
+                return str(cand)
+    except (ImportError, ValueError):
+        pass
+    # 3. System-installed via apt: `libclang-dev` provides versioned files
+    #    like /usr/lib/x86_64-linux-gnu/libclang-18.so.1 — try common ones.
+    for cand in (
+        "/usr/lib/x86_64-linux-gnu/libclang.so",
+        "/usr/lib/x86_64-linux-gnu/libclang-18.so.1",
+        "/usr/lib/x86_64-linux-gnu/libclang-17.so.1",
+        "/usr/lib/x86_64-linux-gnu/libclang-16.so.1",
+        "/usr/lib/x86_64-linux-gnu/libclang-15.so.1",
+        # Local-dev fallback (the historic hardcode).
+        "/home/devuser/.local/lib/python3.12/site-packages/clang/native/libclang.so",
+    ):
+        if Path(cand).is_file():
+            return cand
+    return None
+
+_LIBCLANG = _find_libclang()
+if _LIBCLANG:
+    clang.cindex.Config.set_library_file(_LIBCLANG)
 from clang.cindex import CursorKind, Index, TranslationUnit
 
 HERE = Path(__file__).resolve().parent
